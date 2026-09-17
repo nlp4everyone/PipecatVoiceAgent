@@ -1,0 +1,13 @@
+.git
+.venv
+.idea
+.ruff_cache
+__pycache__
+**/__pycache__
+*.pyc
+.env
+tests
+docs
+note.txt
+Makefile
+docker-compose.yml
