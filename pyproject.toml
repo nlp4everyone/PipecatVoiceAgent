@@ -1,0 +1,29 @@
+[project]
+name = "voice-agent"
+version = "0.1.0"
+description = "Voice AI bot built with Pipecat"
+requires-python = ">=3.11"
+dependencies = [
+    "loguru==0.7.3",
+    "pipecat-ai[cartesia,daily,deepgram,google,groq,openai,runner,silero,webrtc]>=1.4.0",
+    "pipecatcloud",
+    "pydantic-settings>=2.0",
+]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.404,<2",
+    "ruff>=0.12.11,<1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["voice_agent"]
+
+[tool.ruff]
+line-length = 100
+[tool.ruff.lint]
+select = ["I", "UP"]
