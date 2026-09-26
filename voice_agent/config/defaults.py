@@ -2,9 +2,9 @@
 
 Single source of truth for "what to use when the user didn't say" — the
 ``services/*/factory.py`` modules only wire providers to Pipecat classes, they
-don't carry data. A value here is the last resort: the nested env var
-(``LLM__MODEL``, ``STT__LANGUAGE``, ...) or the flat one (``STT_MODEL``,
-``STT_BASE_URL``, ``TTS_MODEL``, see ``settings.py``) always wins when set.
+don't carry data. A value here is the last resort: the env var (``LLM_MODEL``,
+``STT_MODEL``, ``STT_BASE_URL``, ``TTS_MODEL``, ... see ``settings.py``)
+always wins when set.
 """
 
 from voice_agent.config.providers import LLMProvider, STTProvider, TTSProvider
