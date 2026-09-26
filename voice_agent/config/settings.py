@@ -43,7 +43,7 @@ class STTConfig(BaseModel):
     provider: STTProvider = STTProvider.CARTESIA
     model: str | None = None
     api_key: SecretStr | None = None
-    base_url: str | None = None  # groq only (override the OpenAI-compatible endpoint)
+    base_url: str | None = None  # groq / vllm
     language: str = "vi"
 
 

@@ -20,6 +20,7 @@ class STTProvider(StrEnum):
     GEMINI = "gemini"
     GROQ = "groq"
     CARTESIA = "cartesia"
+    VLLM = "vllm"
 
 
 class TTSProvider(StrEnum):
@@ -38,4 +39,5 @@ LEGACY_KEY_ENV: dict[str, str] = {
     "groq": "GROQ_API_KEY",
     "deepgram": "DEEPGRAM_API_KEY",
     "cartesia": "CARTESIA_API_KEY",
+    "vllm": "VLLM_API_KEY",
 }

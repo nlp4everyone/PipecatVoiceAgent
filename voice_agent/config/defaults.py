@@ -21,11 +21,17 @@ STT_DEFAULT_MODEL: dict[STTProvider, str] = {
     STTProvider.GEMINI: "gemini-3.5-transcribe-live",
     STTProvider.GROQ: "whisper-large-v3-turbo",
     STTProvider.CARTESIA: "ink-whisper",
+    # No public model to default to for a self-hosted server; this is a
+    # last-resort literal — real deployments set STT_MODEL.
+    STTProvider.VLLM: "Qwen/Qwen3-ASR-0.6B",
 }
 
 # Only providers with a configurable endpoint need an entry here.
 STT_DEFAULT_BASE_URL: dict[STTProvider, str] = {
     STTProvider.GROQ: "https://api.groq.com/openai/v1",
+    # No public endpoint for a self-hosted server; last-resort literal — real
+    # deployments set STT_BASE_URL.
+    STTProvider.VLLM: "http://localhost:8000/v1",
 }
 
 TTS_DEFAULT_MODEL: dict[TTSProvider, str | None] = {
