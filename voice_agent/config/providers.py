@@ -21,6 +21,7 @@ class STTProvider(StrEnum):
     GROQ = "groq"
     CARTESIA = "cartesia"
     VLLM = "vllm"
+    VLLM_REALTIME = "vllm_realtime"
 
 
 class TTSProvider(StrEnum):
@@ -40,4 +41,5 @@ LEGACY_KEY_ENV: dict[str, str] = {
     "deepgram": "DEEPGRAM_API_KEY",
     "cartesia": "CARTESIA_API_KEY",
     "vllm": "VLLM_API_KEY",
+    "vllm_realtime": "VLLM_API_KEY",
 }

@@ -1,8 +1,8 @@
 """STT factory: STTConfig -> Pipecat STTService.
 
-Providers: deepgram | gemini | groq | cartesia | vllm. Most stream over
-WebSocket; segmented providers (groq, vllm) upload one utterance after VAD
-stop, so latency is higher.
+Providers: deepgram | gemini | groq | cartesia | vllm | vllm_realtime. Most
+stream over WebSocket; segmented providers (groq, vllm) upload one utterance
+after VAD stop, so latency is higher.
 """
 
 from typing import assert_never
@@ -19,6 +19,7 @@ from voice_agent.config.defaults import STT_DEFAULT_BASE_URL, STT_DEFAULT_MODEL
 from voice_agent.config.providers import STTProvider
 from voice_agent.config.settings import STTConfig
 from voice_agent.services.stt.vllm import VLLMSTTService
+from voice_agent.services.stt.vllm_realtime import VLLMRealtimeSTTService
 
 
 def create_stt(cfg: STTConfig) -> STTService:
@@ -69,6 +70,14 @@ def create_stt(cfg: STTConfig) -> STTService:
                 base_url=cfg.base_url or STT_DEFAULT_BASE_URL[cfg.provider],
                 settings=VLLMSTTService.Settings(model=cfg.model or STT_DEFAULT_MODEL[cfg.provider],
                                                  language=language),
+            )
+        case STTProvider.VLLM_REALTIME:
+            # Self-hosted vLLM: streaming over WebSocket (/v1/realtime); needs local VAD
+            return VLLMRealtimeSTTService(
+                api_key=key,
+                base_url=cfg.base_url or STT_DEFAULT_BASE_URL[cfg.provider],
+                settings=VLLMRealtimeSTTService.Settings(model=cfg.model or STT_DEFAULT_MODEL[cfg.provider],
+                                                         language=language),
             )
         case _ as unreachable:
             assert_never(unreachable)

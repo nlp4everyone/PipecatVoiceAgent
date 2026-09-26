@@ -24,6 +24,8 @@ STT_DEFAULT_MODEL: dict[STTProvider, str] = {
     # No public model to default to for a self-hosted server; this is a
     # last-resort literal — real deployments set STT_MODEL.
     STTProvider.VLLM: "Qwen/Qwen3-ASR-0.6B",
+    # The model vLLM's own realtime examples serve.
+    STTProvider.VLLM_REALTIME: "Qwen/Qwen3-ASR-0.6B",
 }
 
 # Only providers with a configurable endpoint need an entry here.
@@ -32,6 +34,7 @@ STT_DEFAULT_BASE_URL: dict[STTProvider, str] = {
     # No public endpoint for a self-hosted server; last-resort literal — real
     # deployments set STT_BASE_URL.
     STTProvider.VLLM: "http://localhost:8000/v1",
+    STTProvider.VLLM_REALTIME: "ws://localhost:8000/v1/realtime",
 }
 
 TTS_DEFAULT_MODEL: dict[TTSProvider, str | None] = {
