@@ -14,14 +14,11 @@ from pipecat.services.llm_service import LLMService
 from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.services.google.llm import GoogleLLMService
 from pipecat.services.groq.llm import GroqLLMService
+
+from voice_agent.config.defaults import LLM_DEFAULT_MODEL
 from voice_agent.config.providers import LLMProvider
 from voice_agent.config.settings import LLMConfig
 
-# Model — used when ``cfg.model`` is None
-BASETEN_DEFAULT_MODEL = "openai/gpt-oss-120b"
-OPENAI_DEFAULT_MODEL = "gpt-4o-mini"
-GEMINI_DEFAULT_MODEL = "gemini-3.1-flash-lite"
-GROQ_DEFAULT_MODEL = "openai/gpt-oss-120b"
 
 def create_llm(cfg: LLMConfig) -> LLMService:
     """Build the LLM service for ``cfg.provider``.
@@ -36,7 +33,7 @@ def create_llm(cfg: LLMConfig) -> LLMService:
             return BasetenLLMService(
                 api_key=key,
                 settings=BasetenLLMService.Settings(
-                    model=cfg.model or BASETEN_DEFAULT_MODEL,
+                    model=cfg.model or LLM_DEFAULT_MODEL[cfg.provider],
                     temperature=cfg.temperature,
                     max_completion_tokens=cfg.max_tokens,
                     system_instruction=cfg.system_instruction,
@@ -47,7 +44,7 @@ def create_llm(cfg: LLMConfig) -> LLMService:
             return OpenAILLMService(
                 api_key=key,
                 settings=OpenAILLMService.Settings(
-                    model=cfg.model or OPENAI_DEFAULT_MODEL,
+                    model=cfg.model or LLM_DEFAULT_MODEL[cfg.provider],
                     temperature=cfg.temperature,
                     max_completion_tokens=cfg.max_tokens,
                     system_instruction=cfg.system_instruction,
@@ -58,7 +55,7 @@ def create_llm(cfg: LLMConfig) -> LLMService:
             return GoogleLLMService(
                 api_key=key,
                 settings=GoogleLLMService.Settings(
-                    model=cfg.model or GEMINI_DEFAULT_MODEL,
+                    model=cfg.model or LLM_DEFAULT_MODEL[cfg.provider],
                     temperature=cfg.temperature,
                     max_tokens=cfg.max_tokens,
                     system_instruction=cfg.system_instruction,
@@ -69,7 +66,7 @@ def create_llm(cfg: LLMConfig) -> LLMService:
             return GroqLLMService(
                 api_key=key,
                 settings=GroqLLMService.Settings(
-                    model=cfg.model or GROQ_DEFAULT_MODEL,
+                    model=cfg.model or LLM_DEFAULT_MODEL[cfg.provider],
                     temperature=cfg.temperature,
                     max_completion_tokens=cfg.max_tokens,
                     system_instruction=cfg.system_instruction,
