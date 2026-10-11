@@ -42,6 +42,7 @@ TTS_DEFAULT_MODEL: dict[TTSProvider, str | None] = {
     TTSProvider.DEEPGRAM: None,  # model is implied by the voice name
     TTSProvider.GEMINI: "gemini-3.1-flash-tts-preview",
     TTSProvider.GROQ: "canopylabs/orpheus-v1-english",
+    TTSProvider.VIENEU: "vieneu-v3-turbo",
 }
 
 TTS_DEFAULT_VOICE: dict[TTSProvider, str] = {
@@ -49,4 +50,12 @@ TTS_DEFAULT_VOICE: dict[TTSProvider, str] = {
     TTSProvider.DEEPGRAM: "aura-2-helena-en",  # Deepgram TTS: English only
     TTSProvider.GEMINI: "Zephyr",
     TTSProvider.GROQ: "autumn",  # Groq TTS: English only
+    TTSProvider.VIENEU: "Mai Anh",  # preset name; list with GET /v1/voices
+}
+
+# Only providers with a configurable endpoint need an entry here.
+TTS_DEFAULT_BASE_URL: dict[TTSProvider, str] = {
+    # Self-hosted, run outside this repo; port 8001 so it doesn't clash with
+    # the vLLM STT server on 8000. Last-resort literal — set TTS_BASE_URL.
+    TTSProvider.VIENEU: "http://localhost:8001/v1",
 }

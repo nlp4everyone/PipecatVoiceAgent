@@ -29,6 +29,7 @@ class TTSProvider(StrEnum):
     DEEPGRAM = "deepgram"
     GEMINI = "gemini"
     GROQ = "groq"
+    VIENEU = "vieneu"
 
 
 # provider value -> env var holding its API key when LLM__API_KEY etc. is not set.
@@ -42,4 +43,5 @@ LEGACY_KEY_ENV: dict[str, str] = {
     "cartesia": "CARTESIA_API_KEY",
     "vllm": "VLLM_API_KEY",
     "vllm_realtime": "VLLM_API_KEY",
+    "vieneu": "VIENEU_API_KEY",
 }

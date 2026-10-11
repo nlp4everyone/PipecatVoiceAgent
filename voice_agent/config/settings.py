@@ -19,7 +19,12 @@ import os
 from pydantic import BaseModel, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from voice_agent.config.defaults import STT_DEFAULT_BASE_URL, STT_DEFAULT_MODEL, TTS_DEFAULT_MODEL
+from voice_agent.config.defaults import (
+    STT_DEFAULT_BASE_URL,
+    STT_DEFAULT_MODEL,
+    TTS_DEFAULT_BASE_URL,
+    TTS_DEFAULT_MODEL,
+)
 from voice_agent.config.prompts import DEFAULT_SYSTEM_INSTRUCTION
 from voice_agent.config.providers import (
     LEGACY_KEY_ENV,
@@ -52,7 +57,7 @@ class TTSConfig(BaseModel):
     api_key: SecretStr | None = None
     voice: str | None = None
     model: str | None = None
-    base_url: str | None = None  # reserved; not used by any current provider
+    base_url: str | None = None  # vieneu
     language: str = "vi"
 
 
@@ -125,6 +130,8 @@ class Settings(BaseSettings):
             self.stt_base_url = STT_DEFAULT_BASE_URL.get(self.stt_provider)
         if self.stt_model is None:
             self.stt_model = STT_DEFAULT_MODEL[self.stt_provider]
+        if self.tts_base_url is None:
+            self.tts_base_url = TTS_DEFAULT_BASE_URL.get(self.tts_provider)
         if self.tts_model is None:
             self.tts_model = TTS_DEFAULT_MODEL[self.tts_provider]
         return self

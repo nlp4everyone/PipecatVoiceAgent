@@ -1,6 +1,6 @@
 """TTS factory: TTSConfig -> Pipecat TTSService.
 
-Providers: cartesia | deepgram | gemini | groq. Language coverage differs per
+Providers: cartesia | deepgram | gemini | groq | vieneu. Language coverage differs per
 provider; check the provider docs before switching for a non-English agent.
 """
 
@@ -14,9 +14,10 @@ from pipecat.services.groq.tts import GroqTTSService
 from pipecat.services.tts_service import TTSService
 from pipecat.transcriptions.language import Language
 
-from voice_agent.config.defaults import TTS_DEFAULT_MODEL, TTS_DEFAULT_VOICE
+from voice_agent.config.defaults import TTS_DEFAULT_BASE_URL, TTS_DEFAULT_MODEL, TTS_DEFAULT_VOICE
 from voice_agent.config.providers import TTSProvider
 from voice_agent.config.settings import TTSConfig
+from voice_agent.services.tts.vieneu import VieNeuTTSService
 
 
 def create_tts(cfg: TTSConfig) -> TTSService:
@@ -64,6 +65,16 @@ def create_tts(cfg: TTSConfig) -> TTSService:
                 settings=GroqTTSService.Settings(
                     voice=cfg.voice or TTS_DEFAULT_VOICE[cfg.provider],
                     language=language,
+                    model=cfg.model or TTS_DEFAULT_MODEL[cfg.provider],
+                ),
+            )
+        case TTSProvider.VIENEU:
+            # Self-hosted VieNeu-TTS: HTTP stream, OpenAI-compatible; Vietnamese only
+            return VieNeuTTSService(
+                api_key=key,
+                base_url=cfg.base_url or TTS_DEFAULT_BASE_URL[cfg.provider],
+                settings=VieNeuTTSService.Settings(
+                    voice=cfg.voice or TTS_DEFAULT_VOICE[cfg.provider],
                     model=cfg.model or TTS_DEFAULT_MODEL[cfg.provider],
                 ),
             )
