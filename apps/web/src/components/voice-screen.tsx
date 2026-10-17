@@ -1,4 +1,4 @@
-import { RTVIEvent, type TranscriptData } from "@pipecat-ai/client-js";
+import { RTVIEvent } from "@pipecat-ai/client-js";
 import {
   usePipecatClientMediaTrack,
   usePipecatClientMicControl,
@@ -13,13 +13,14 @@ import {
   MicOffIcon,
   XIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
-import { AudioVisualizerWaveView } from "@/components/pipecat/audio-visualizer-wave";
+import { ChatOrb, type OrbState } from "@/components/chat-orb";
 import { unlockBotAudio } from "@/components/pipecat/bot-audio";
 import { Conversation } from "@/components/pipecat/conversation";
 import { TextInput } from "@/components/pipecat/text-input";
 import { TranscriptOverlay } from "@/components/pipecat/transcript-overlay";
+import { playConnectChime, playEndChime, unlockChimes } from "@/lib/chimes";
 import { cn } from "@/lib/utils";
 
 /** Pha hội thoại, suy ra từ các event RTVI. Quyết định quả cầu phản ứng theo ai. */
@@ -33,10 +34,11 @@ const CONNECTING_STATES = new Set([
   "connected", // transport đã nối, bot chưa gửi bot-ready
 ]);
 
+// Chỉ dùng cho trình đọc màn hình: trên giao diện, trạng thái thể hiện qua quả cầu.
 const PHASE_LABEL: Record<Phase, string> = {
   listening: "Đang nghe",
   userSpeaking: "Đang nghe",
-  thinking: "Đang suy nghĩ…",
+  thinking: "Đang suy nghĩ",
   botSpeaking: "Đang nói",
 };
 
@@ -53,36 +55,33 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
   const userTrack = usePipecatClientMediaTrack("audio", "local");
 
   const [phase, setPhase] = useState<Phase>("listening");
-  const [userCaption, setUserCaption] = useState("");
   const [captionsOn, setCaptionsOn] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
+  const wasReadyRef = useRef(false);
 
   const isReady = transportState === "ready";
   const isConnecting = CONNECTING_STATES.has(transportState);
   const inCall = isReady || isConnecting;
 
   useRTVIClientEvent(RTVIEvent.TransportStateChanged, (state) => {
-    if (state !== "ready") {
-      setPhase("listening");
-      setUserCaption("");
+    if (state === "ready") {
+      wasReadyRef.current = true;
+      playConnectChime();
+      return;
     }
+    if (wasReadyRef.current) {
+      wasReadyRef.current = false;
+      playEndChime();
+    }
+    setPhase("listening");
   });
-  useRTVIClientEvent(RTVIEvent.UserStartedSpeaking, () => {
-    setPhase("userSpeaking");
-    setUserCaption("");
-  });
+  useRTVIClientEvent(RTVIEvent.UserStartedSpeaking, () => setPhase("userSpeaking"));
   useRTVIClientEvent(RTVIEvent.UserStoppedSpeaking, () => setPhase("thinking"));
-  useRTVIClientEvent(RTVIEvent.BotStartedSpeaking, () => {
-    setPhase("botSpeaking");
-    setUserCaption("");
-  });
+  useRTVIClientEvent(RTVIEvent.BotStartedSpeaking, () => setPhase("botSpeaking"));
   // Khi bị ngắt lời, UserStartedSpeaking có thể tới trước BotStoppedSpeaking:
   // chỉ quay về "nghe" nếu bot vẫn đang là người nói.
   useRTVIClientEvent(RTVIEvent.BotStoppedSpeaking, () =>
     setPhase((p) => (p === "botSpeaking" ? "listening" : p)),
-  );
-  useRTVIClientEvent(RTVIEvent.UserTranscript, (data: TranscriptData) =>
-    setUserCaption(data.text),
   );
 
   // Quả cầu nhảy theo giọng bot khi bot nói, theo mic khi người dùng nói,
@@ -90,116 +89,111 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
   const orbTrack =
     phase === "botSpeaking" ? botTrack : phase === "userSpeaking" && isMicEnabled ? userTrack : null;
 
-  const status = !inCall
-    ? "Nhấn để bắt đầu trò chuyện"
+  const orbState: OrbState = !inCall
+    ? "idle"
     : isConnecting
-      ? "Đang kết nối…"
+      ? "connecting"
+      : phase === "thinking"
+        ? "thinking"
+        : orbTrack
+          ? "speaking"
+          : "listening";
+
+  const srStatus = !inCall
+    ? "Chưa kết nối"
+    : isConnecting
+      ? "Đang kết nối"
       : !isMicEnabled
         ? "Micro đang tắt"
         : PHASE_LABEL[phase];
 
+  // Dòng chữ duy nhất dưới quả cầu: gợi ý trước khi gọi, hoặc báo mic đang tắt.
+  const hint = !inCall ? "Chạm để bắt đầu trò chuyện" : isReady && !isMicEnabled ? "Micro đang tắt" : null;
+
   const handleStart = () => {
-    unlockBotAudio(); // phải gọi trong lúc người dùng bấm, nếu không iOS Safari chặn tiếng
+    // Phải gọi trong lúc người dùng bấm, nếu không iOS Safari chặn tiếng.
+    unlockBotAudio();
+    unlockChimes();
     void onConnect();
   };
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background text-foreground">
       <main className="relative flex min-w-0 flex-1 flex-col items-center">
-        <header className="flex w-full items-center justify-between px-4 py-3 sm:px-6">
-          <span className="text-sm font-medium text-muted-foreground">VoiceAgent</span>
+        <header className="flex h-16 w-full items-center justify-end gap-1 px-3 sm:px-5">
           {inCall && (
-            <IconButton
-              label={chatOpen ? "Ẩn hội thoại" : "Xem hội thoại"}
-              onClick={() => setChatOpen((v) => !v)}
-              active={chatOpen}
-            >
-              <MessageSquareTextIcon />
-            </IconButton>
+            <>
+              <IconButton
+                label={captionsOn ? "Tắt phụ đề" : "Bật phụ đề"}
+                onClick={() => setCaptionsOn((v) => !v)}
+                variant="ghost"
+              >
+                {captionsOn ? <CaptionsIcon /> : <CaptionsOffIcon />}
+              </IconButton>
+              <IconButton
+                label={chatOpen ? "Ẩn hội thoại" : "Xem hội thoại"}
+                onClick={() => setChatOpen((v) => !v)}
+                variant="ghost"
+                active={chatOpen}
+              >
+                <MessageSquareTextIcon />
+              </IconButton>
+            </>
           )}
         </header>
 
-        <section className="flex w-full flex-1 flex-col items-center justify-center gap-6 px-4">
+        <section className="flex w-full flex-1 flex-col items-center justify-center gap-8 px-4">
           <button
             type="button"
             onClick={inCall ? undefined : handleStart}
             disabled={inCall}
             aria-label="Bắt đầu trò chuyện"
             className={cn(
-              "rounded-full transition-transform duration-500",
-              !inCall && "cursor-pointer hover:scale-105",
-              !isMicEnabled && isReady && "opacity-50",
+              "rounded-full transition-opacity duration-500",
+              !inCall && "cursor-pointer",
+              isReady && !isMicEnabled && "opacity-70",
             )}
           >
-            <AudioVisualizerWaveView
-              track={orbTrack}
-              isConnecting={isConnecting}
-              isThinking={isReady && phase === "thinking"}
-              color="#3B82F6"
-              accentColor="#A5F3FC"
-              themeMode="dark"
-              size={280}
-            />
+            <ChatOrb track={orbTrack} state={orbState} muted={isReady && !isMicEnabled} size={240} />
           </button>
 
-          <p className="text-sm text-muted-foreground" aria-live="polite">
-            {status}
+          <p className="sr-only" aria-live="polite">
+            {srStatus}
           </p>
 
-          {/* Phụ đề: lời bot (từng chữ, theo BotOutput) và lời người dùng (STT). */}
-          <div className="flex min-h-24 w-full max-w-xl flex-col items-center justify-start gap-2">
-            {captionsOn && isReady && (
-              <>
-                {phase === "userSpeaking" || phase === "thinking" ? (
-                  userCaption && (
-                    <p className="text-center text-base text-balance text-muted-foreground">
-                      {userCaption}
-                    </p>
-                  )
-                ) : (
-                  <TranscriptOverlay size="lg" />
-                )}
-              </>
+          {/* Phụ đề lời bot (từng chữ, theo BotOutput); không hiện transcript của người dùng. */}
+          <div className="flex min-h-28 w-full max-w-xl flex-col items-center justify-start gap-2">
+            {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
+            {captionsOn && isReady && phase !== "userSpeaking" && phase !== "thinking" && (
+              <TranscriptOverlay size="lg" />
+            )}
+            {error && (
+              <p className="max-w-md text-center text-sm text-destructive" role="alert">
+                {error}
+              </p>
             )}
           </div>
-
-          {error && (
-            <p className="max-w-md text-center text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          )}
         </section>
 
-        <footer className="flex items-center justify-center gap-4 pb-10">
-          {inCall ? (
+        <footer className="flex h-28 items-center justify-center gap-3 pb-6">
+          {inCall && (
             <>
-              <IconButton
-                label={captionsOn ? "Tắt phụ đề" : "Bật phụ đề"}
-                onClick={() => setCaptionsOn((v) => !v)}
-              >
-                {captionsOn ? <CaptionsIcon /> : <CaptionsOffIcon />}
-              </IconButton>
               <IconButton
                 label={isMicEnabled ? "Tắt micro" : "Bật micro"}
                 onClick={() => enableMic(!isMicEnabled)}
                 active={!isMicEnabled}
-                size="lg"
                 disabled={!isReady}
               >
                 {isMicEnabled ? <MicIcon /> : <MicOffIcon />}
               </IconButton>
-              <IconButton label="Kết thúc" onClick={() => void onDisconnect()} tone="danger">
-                <XIcon />
-              </IconButton>
+              <button
+                type="button"
+                onClick={() => void onDisconnect()}
+                className="inline-flex h-14 items-center rounded-full bg-foreground px-7 text-base font-medium text-background transition hover:opacity-85"
+              >
+                Kết thúc
+              </button>
             </>
-          ) : (
-            <button
-              type="button"
-              onClick={handleStart}
-              className="rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background transition hover:opacity-90"
-            >
-              Bắt đầu trò chuyện
-            </button>
           )}
         </footer>
       </main>
@@ -209,7 +203,7 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
         <aside className="absolute inset-0 z-10 flex flex-col border-border bg-background sm:static sm:w-96 sm:border-l">
           <div className="flex items-center justify-between px-4 py-3">
             <span className="text-sm font-medium">Hội thoại</span>
-            <IconButton label="Đóng" onClick={() => setChatOpen(false)} size="sm">
+            <IconButton label="Đóng" onClick={() => setChatOpen(false)} size="sm" variant="ghost">
               <XIcon />
             </IconButton>
           </div>
@@ -231,8 +225,8 @@ interface IconButtonProps {
   children: React.ReactNode;
   active?: boolean;
   disabled?: boolean;
-  tone?: "default" | "danger";
-  size?: "sm" | "md" | "lg";
+  variant?: "filled" | "ghost";
+  size?: "sm" | "md";
 }
 
 function IconButton({
@@ -241,7 +235,7 @@ function IconButton({
   children,
   active = false,
   disabled = false,
-  tone = "default",
+  variant = "filled",
   size = "md",
 }: IconButtonProps) {
   return (
@@ -254,12 +248,11 @@ function IconButton({
       className={cn(
         "inline-flex items-center justify-center rounded-full transition disabled:opacity-40",
         size === "sm" && "size-8 [&_svg]:size-4",
-        size === "md" && "size-14 [&_svg]:size-6",
-        size === "lg" && "size-16 [&_svg]:size-7",
-        tone === "danger"
-          ? "bg-destructive/15 text-destructive hover:bg-destructive/25"
-          : active
-            ? "bg-foreground text-background hover:opacity-90"
+        size === "md" && (variant === "ghost" ? "size-10 [&_svg]:size-5" : "size-14 [&_svg]:size-6"),
+        active
+          ? "bg-foreground text-background hover:opacity-90"
+          : variant === "ghost"
+            ? "text-muted-foreground hover:bg-muted hover:text-foreground"
             : "bg-muted text-foreground hover:bg-muted/70",
       )}
     >
