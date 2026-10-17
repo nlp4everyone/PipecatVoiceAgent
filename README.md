@@ -36,10 +36,33 @@ chừng như khi nói chuyện với người thật.
 ```bash
 make env        # tạo .env từ .env.example
 # mở .env, điền GROQ_API_KEY và CARTESIA_API_KEY
-make dev        # chạy bot trong Docker
+```
+
+Rồi chạy bot theo một trong hai cách (cùng dùng cổng 7860, chỉ chạy một):
+
+```bash
+make dev        # trong Docker
+# hoặc, không dùng Docker (cần uv: https://docs.astral.sh/uv/)
+uv sync         # lần đầu
+make run-local
 ```
 
 Mở <http://localhost:7860/client>, cho phép micro và bắt đầu nói.
+
+Dùng STT/TTS tự host (vLLM, VieNeu-TTS) thì các server đó phải đang chạy ở
+`STT_BASE_URL` / `TTS_BASE_URL` trong `.env`. Khi chạy bằng `make dev`,
+`localhost` là chính container, không phải máy của bạn.
+
+### Giao diện web kiểu ChatGPT Voice
+
+Bot chạy rồi thì mở thêm một terminal:
+
+```bash
+make web-install   # lần đầu, cần Node.js 22.12+
+make web-dev       # http://localhost:5173
+```
+
+Yêu cầu chi tiết và cách public qua Cloudflare Tunnel: xem [apps/web](apps/web/README.md).
 
 ## Tài liệu
 

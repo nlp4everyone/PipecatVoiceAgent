@@ -6,20 +6,41 @@ React 19, Vite và Tailwind 4. Kết nối qua SmallWebRTC.
 
 ## Chạy
 
-Cần Node.js 22+.
+Cần:
+
+- [Node.js](https://nodejs.org/) 22.12+ (đi kèm `npm`), ví dụ qua
+  [nvm](https://github.com/nvm-sh/nvm): `nvm install 22`. Nếu `node -v` báo
+  `command not found` thì nvm chưa được nạp vào shell, xem
+  [hướng dẫn cài nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+- Trình duyệt hỗ trợ WebRTC và WebGL (Chrome, Edge, Firefox, Safari bản mới).
+- Bot đang chạy ở cổng 7860 (`make run-local` hoặc `make dev`), xem
+  [README gốc](../../README.md#chạy-thử-nhanh).
+
+Ở thư mục gốc:
 
 ```bash
-# 1. bot (dev runner, cổng 7860) — ở thư mục gốc
-make dev            # hoặc: make run-local
-
-# 2. web app (cổng 5173)
 make web-install    # lần đầu
-make web-dev
+make web-dev        # http://localhost:5173
 ```
 
 Mở <http://localhost:5173>, bấm **Bắt đầu trò chuyện** và cho phép micro.
 
-Bot chạy ở chỗ khác thì đặt `BOT_URL`, ví dụ `cd apps/web && BOT_URL=http://192.168.1.10:7860 npm run dev`.
+Bot chạy ở máy khác thì đặt `BOT_URL`, ví dụ
+`cd apps/web && BOT_URL=http://192.168.1.10:7860 npm run dev`.
+
+## Public qua Cloudflare Tunnel
+
+Mở web app từ thiết bị khác qua
+[Quick Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/do-more-with-tunnels/trycloudflare/)
+(không cần tài khoản; cài `cloudflared` theo
+[hướng dẫn](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)):
+
+```bash
+cloudflared tunnel --url http://localhost:5173
+```
+
+Mở URL `https://….trycloudflare.com` mà lệnh in ra. Âm thanh WebRTC không đi qua
+tunnel, nên mạng chặt (4G, mạng công ty) có thể cần thêm TURN server.
 
 ## Luồng kết nối
 
