@@ -7,9 +7,9 @@ chừng như khi nói chuyện với người thật.
 
 ## Demo
 
-https://github.com/user-attachments/assets/982dcfb9-4d5f-4bf3-9d4b-0b7697c82451
+https://github.com/user-attachments/assets/3ab2f507-ea23-4f40-9900-2371ca9fe29d
 
-Không xem được video? Tải bản dự phòng: [docs/media/demo.mp4](docs/media/demo.mp4).
+Không xem được video? Tải bản dự phòng: [docs/media/demo_v2.mp4](docs/media/demo_v2.mp4).
 
 ## Bot hoạt động thế nào?
 
@@ -67,6 +67,17 @@ Bot chạy rồi thì mở thêm một terminal:
 make web-install   # lần đầu, cần Node.js 22.12+
 make web-dev       # http://localhost:5173
 ```
+
+Hoặc chạy gộp bot và giao diện web trong một terminal (không dùng Docker, cần
+uv và Node.js 22.12+):
+
+```bash
+make dev-all       # bot :7860 + web :5173, tự npm install lần đầu
+```
+
+Log hai bên có tiền tố `[BE]` / `[FE]` màu riêng. Ctrl+C tắt cả hai; một bên
+dừng thì bên kia cũng dừng theo. Lệnh này tự chạy bot, nên đừng chạy kèm
+`make dev` hay `make run-local` (trùng cổng 7860).
 
 Yêu cầu chi tiết và cách public qua Cloudflare Tunnel: xem [apps/web](apps/web/README.md).
 
