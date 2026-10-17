@@ -3,6 +3,7 @@
 #   make build          build the image (docker compose, BuildKit cache mounts)
 #   make up             start the agent server in the background
 #   make dev            run the dev runner with the WebRTC test UI (port 7860)
+#   make dev-all        run the agent and the web app on the host (7860 + 5173)
 #   make help           list every target
 
 IMAGE   ?= voice-agent
@@ -13,7 +14,7 @@ export IMAGE TAG PORT
 
 .DEFAULT_GOAL := help
 .PHONY: help build build-nocache push up down restart logs ps shell health dev dev-down \
-        run-local web-install web-dev lint typecheck clean env
+        run-local web-install web-dev dev-all lint typecheck clean env
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | \
@@ -74,6 +75,18 @@ web-install: ## Install the web app dependencies (Node 22+)
 
 web-dev: ## Run the web app; needs the dev runner (make dev / run-local) on 7860
 	cd apps/web && npm run dev
+
+# Each pipeline runs in its own process group (set -m) so the EXIT trap can kill
+# uv/python and npm/vite as a whole. Ctrl+C, or either side exiting, stops both.
+dev-all: SHELL := bash
+dev-all: env ## Run the agent (uv, 7860) and the web app (5173) together on the host
+	@test -d apps/web/node_modules || { cd apps/web && npm install; }
+	@set -m -o pipefail; \
+	trap 'exit 130' INT TERM; \
+	trap 'kill -- $$(jobs -p | sed "s/^/-/") 2>/dev/null' EXIT; \
+	PYTHONUNBUFFERED=1 uv run bot.py -t webrtc 2>&1 | sed -u 's/^/\x1b[1;33m[BE]\x1b[0m /' & \
+	(cd apps/web && npm run dev) 2>&1 | sed -u 's/^/\x1b[1;36m[FE]\x1b[0m /' & \
+	wait -n
 
 # ---- quality ----------------------------------------------------------------
 
