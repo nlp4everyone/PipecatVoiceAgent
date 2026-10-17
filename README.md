@@ -5,6 +5,12 @@ Trợ lý giọng nói **tiếng Việt**, hội thoại theo thời gian thực
 phòng Daily; bot nghe, hiểu, trả lời bằng giọng nói — và có thể bị ngắt lời giữa
 chừng như khi nói chuyện với người thật.
 
+## Demo
+
+https://github.com/user-attachments/assets/982dcfb9-4d5f-4bf3-9d4b-0b7697c82451
+
+Không xem được video? Tải bản dự phòng: [docs/media/demo.mp4](docs/media/demo.mp4).
+
 ## Bot hoạt động thế nào?
 
 ```
