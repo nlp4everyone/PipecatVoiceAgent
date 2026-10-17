@@ -13,7 +13,7 @@ export IMAGE TAG PORT
 
 .DEFAULT_GOAL := help
 .PHONY: help build build-nocache push up down restart logs ps shell health dev dev-down \
-        run-local lint typecheck clean env
+        run-local web-install web-dev lint typecheck clean env
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | \
@@ -66,6 +66,14 @@ dev-down: ## Stop the dev runner
 
 run-local: env ## Run the dev runner on the host with uv (no Docker)
 	uv run bot.py -t webrtc
+
+# ---- web app (apps/web, Pipecat UI, http://localhost:5173) ----------------
+
+web-install: ## Install the web app dependencies (Node 22+)
+	cd apps/web && npm install
+
+web-dev: ## Run the web app; needs the dev runner (make dev / run-local) on 7860
+	cd apps/web && npm run dev
 
 # ---- quality ----------------------------------------------------------------
 
