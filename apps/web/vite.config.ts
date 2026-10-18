@@ -17,8 +17,8 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    // Cho phép truy cập qua Cloudflare Tunnel (subdomain đổi mỗi lần chạy).
-    allowedHosts: ['.trycloudflare.com'],
+    // Cho phép truy cập qua Cloudflare Tunnel (subdomain đổi mỗi lần chạy) và Tailscale (*.ts.net).
+    allowedHosts: ['.trycloudflare.com', '.ts.net'],
     proxy: {
       '/start': BOT_URL,
       '/sessions': BOT_URL,
