@@ -243,14 +243,15 @@ Kiểm tra từ Safari / Chrome trên điện thoại: mở
 
 ### 1.4 Tạo `apps/mobile`
 
-Dự kiến cấu trúc:
+Cấu trúc (một màn hình nên không dùng Expo Router):
 
 ```
 apps/mobile/
   app.json                 # tên app, bundle id, quyền, plugin
   .env.example             # EXPO_PUBLIC_BOT_URL, EXPO_PUBLIC_ICE_SERVERS, EXPO_PUBLIC_APP_KEY
+  index.ts                 # đăng ký App
   src/
-    app/index.tsx          # màn hình duy nhất
+    App.tsx                # màn hình duy nhất
     lib/transports.ts      # copy từ web, đăng ký RNSmallWebRTCTransport
     lib/config.ts          # đọc biến EXPO_PUBLIC_*
     hooks/use-pipecat-app.ts
@@ -266,8 +267,10 @@ Cấu hình native (trong `app.json`, theo ví dụ chính thức):
 - Android: `RECORD_AUDIO`, `MODIFY_AUDIO_SETTINGS`, `INTERNET`,
   `ACCESS_NETWORK_STATE`, `BLUETOOTH`, `WAKE_LOCK`. Bỏ các quyền camera / chia
   sẻ màn hình của ví dụ — app chỉ dùng tiếng.
-- Bundle id riêng, ví dụ `dev.<tên-bạn>.voiceagent`. Với Apple ID miễn phí, bundle
-  id phải chưa ai dùng.
+- Bundle id `dev.nlp4everyone.voiceagent`. Với Apple ID miễn phí, bundle id phải
+  chưa ai dùng — nếu Xcode báo trùng thì đổi trong `app.json`.
+- Quyền camera tắt qua option của plugin (`enableCamera: false`), không chặn bằng
+  `blockedPermissions`, để service nền của Daily khai báo đúng kiểu `microphone`.
 - **Chưa bật background mode** (`UIBackgroundModes`) dù ví dụ chính thức có
   `voip` — việc giữ kết nối khi app xuống nền thuộc giai đoạn 2 (bước 2.8).
 
@@ -309,16 +312,19 @@ gì.
 **Xong khi:** trên cả iPhone và Android, qua 4G — bấm Connect, nghe bot chào, nói
 và được trả lời, ngắt lời bot được.
 
-Cần kiểm chứng ở bước này:
+Cần kiểm chứng ở bước này (đã đọc code transport `1.8.0`, còn phải thử trên máy):
 
 - Với URL tuyệt đối, transport có gửi offer tới đúng
-  `https://…:8443/sessions/{id}/api/offer` không (web app dùng đường dẫn tương
-  đối qua proxy của Vite).
-- Tiếng bot mặc định ra loa ngoài hay loa thoại.
+  `https://…:8443/sessions/{id}/api/offer` không. *Code:* có — lấy endpoint
+  `/start` thay `/start` bằng `/sessions/{id}/api/offer`, gửi kèm cùng headers
+  (nên `X-App-Key` cũng tới được offer).
+- Tiếng bot mặc định ra loa ngoài hay loa thoại. *Code:* app gọi
+  `client.updateMic("SPEAKERPHONE")` khi kết nối, như ví dụ chính thức.
 - Có nhận được sự kiện mức âm thanh (`onLocalAudioLevel` / `onRemoteAudioLevel`) —
   giai đoạn 2 cần cho orb. Đã biết transport chỉ gửi 2 lần/giây; giai đoạn 2
   (bước 2.1) sẽ patch lên ~12 lần/giây.
-- Transport có dùng `iceConfig` mà `/start` trả về không (xem 1.8).
+- Transport có dùng `iceConfig` mà `/start` trả về không (xem 1.8). *Code:* có —
+  `_connect` đọc `iceConfig.iceServers`; hook cũng gán `transport.iceServers`.
 
 ### 1.6 Port hook và registry transport
 
