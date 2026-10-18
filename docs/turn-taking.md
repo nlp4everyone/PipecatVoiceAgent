@@ -13,7 +13,7 @@ Ba luật này được gom thành một **chế độ hội thoại**, chọn b
 
 | `TURN_PROFILE` | Dùng cho | Hành vi |
 |---|---|---|
-| `webrtc` *(mặc định)* | Trình duyệt | Không ngắt lời được khi bot đang nói |
+| `webrtc` *(mặc định)* | Trình duyệt | Ngắt lời bot được, trừ câu chào đầu tiên |
 | `telephony` | Điện thoại | Tiếng ồn nhiều: cần vài từ mới tính là bắt đầu nói; nói xong là khi im một khoảng cố định |
 | `kiosk` | Thiết bị công cộng | Chỉ phản ứng sau câu đánh thức *"xin chào bot"* |
 | `intake` | Điền form, hỏi thông tin | Chờ người dùng nói hết ý — LLM có thể bảo "chưa xong, chờ tiếp" |

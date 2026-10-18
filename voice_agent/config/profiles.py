@@ -27,7 +27,7 @@ class TurnProfile:
 
 PROFILES: dict[str, TurnProfile] = {
     # browser client; user may barge in, greeting is protected
-    "webrtc": TurnProfile(mute="always"),
+    "webrtc": TurnProfile(mute="until_first_complete"),
     # phone audio is noisy: need a few words before interrupting, drop overlap
     "telephony": TurnProfile(start="min_words", stop="speech_timeout", mute="always"),
     # public device: only react after a wake phrase
