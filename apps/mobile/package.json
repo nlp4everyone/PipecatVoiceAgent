@@ -1,0 +1,51 @@
+{
+  "name": "voice-agent-mobile",
+  "version": "0.1.0",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start --dev-client",
+    "android": "expo run:android --device",
+    "ios": "expo run:ios --device",
+    "typecheck": "tsc --noEmit",
+    "doctor": "npx expo-doctor"
+  },
+  "dependencies": {
+    "@daily-co/config-plugin-rn-daily-js": "0.0.12",
+    "@daily-co/react-native-daily-js": "^0.86.0",
+    "@daily-co/react-native-webrtc": "^124.0.6-daily.2",
+    "@pipecat-ai/client-js": "^1.14.0",
+    "@pipecat-ai/react-native-daily-media-manager": "^0.0.2",
+    "@pipecat-ai/react-native-small-webrtc-transport": "^1.8.0",
+    "@react-native-async-storage/async-storage": "^3.1.1",
+    "expo": "~55.0.31",
+    "expo-build-properties": "~55.0.18",
+    "expo-dev-client": "~55.0.40",
+    "expo-status-bar": "~55.0.6",
+    "react": "19.2.0",
+    "react-native": "0.83.10",
+    "react-native-background-timer": "^2.4.1",
+    "react-native-get-random-values": "^1.11.0",
+    "react-native-safe-area-context": "~5.6.2"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~5.9.2"
+  },
+  "private": true,
+  "expo": {
+    "install": {
+      "exclude": [
+        "@react-native-async-storage/async-storage"
+      ]
+    },
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "react-native-background-timer",
+          "@daily-co/react-native-daily-js",
+          "@daily-co/react-native-webrtc"
+        ]
+      }
+    }
+  }
+}
