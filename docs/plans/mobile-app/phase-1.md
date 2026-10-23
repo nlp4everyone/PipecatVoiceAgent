@@ -175,7 +175,11 @@ Chỉ cần cho iOS — không cài Android Studio.
 
 **Xcode** (build iOS, chỉ có trên Mac):
 
-1. Cài **Xcode** từ App Store (khoảng 10–15 GB, cài lâu).
+1. Cài **Xcode 26** (khoảng 10–15 GB, cài lâu). Expo SDK 55 cần Swift 6.2 nên
+   **Xcode 16.x không build được**. Xcode 26 cần macOS ≥ 15.6; trên macOS 15
+   (Sequoia) tải **Xcode 26.2** bản *Apple silicon* từ
+   [developer.apple.com/download/all](https://developer.apple.com/download/all/)
+   — App Store có thể chỉ có bản mới hơn đòi macOS 26.
 2. Mở Xcode một lần, đồng ý license, cài **iOS platform** khi được hỏi.
 3. Chọn đúng bộ công cụ dòng lệnh:
 
@@ -283,6 +287,25 @@ npx expo run:android --device
 # Trên Mac (sau khi git pull), iPhone cắm vào Mac
 npx expo run:ios --device       # lần đầu Xcode hỏi team ký → Personal Team
 ```
+
+**Bản Release cho iPhone (không cần Metro).** Bản debug tải JS từ Metro; nếu
+màn hình *Development Build* nhớ nhầm server cũ thì phải chọn lại bằng tay trên
+máy. Bản Release nhúng sẵn JS và giá trị `.env`, mở ra là chạy:
+
+```bash
+cd ios
+xcodebuild -workspace VoiceAgent.xcworkspace -scheme VoiceAgent \
+  -configuration Release -destination 'id=<UDID iPhone>' \
+  -allowProvisioningUpdates DEVELOPMENT_TEAM=<Team ID> CODE_SIGN_STYLE=Automatic build
+xcrun devicectl device install app --device <id> <DerivedData>/Build/Products/Release-iphoneos/VoiceAgent.app
+```
+
+UDID lấy từ `xcrun xctrace list devices`; Team ID của Personal Team lấy trong
+Xcode → Settings → Accounts. Đổi `.env` thì build lại.
+
+**Không thử tiếng trên iOS Simulator.** Simulator (cả iOS 18.6 và 26.3) bị
+crash ngay khi WebRTC mở micro: `SetProperty: RPC timeout. Apparently
+deadlocked`. Đây là lỗi CoreAudio của simulator, máy thật chạy bình thường.
 
 Hai lệnh này tự sinh thư mục `android/` (trên PC) và `ios/` (trên Mac). Không
 commit hai thư mục này — cấu hình nằm hết trong `app.json`. Từ đây trở đi, sửa
@@ -392,11 +415,14 @@ lại. TURN cấu hình phía bot.
 
 ## Xong giai đoạn 1 khi
 
-- [ ] App cài được và mở được trên iPhone và Android.
-- [ ] Qua 4G: kết nối, nghe bot chào, nói chuyện, ngắt lời bot được.
-- [ ] Màn hình hiện đúng chữ bạn nói và chữ bot trả lời.
-- [ ] Mute và kết thúc hoạt động; kết nối lại sau khi kết thúc được.
-- [ ] Đổi `EXPO_PUBLIC_BOT_URL` sang máy khác không phải sửa code.
+- [x] App cài được và mở được trên iPhone và Android.
+- [x] Qua 4G: kết nối, nghe bot chào, nói chuyện, ngắt lời bot được.
+- [x] Màn hình hiện đúng chữ bạn nói và chữ bot trả lời.
+- [x] Mute và kết thúc hoạt động; kết nối lại sau khi kết thúc được.
+- [x] Đổi `EXPO_PUBLIC_BOT_URL` sang máy khác không phải sửa code.
+
+**Đã xong ngày 2026-10-23** — thử trên iPhone 15 Pro Max (iOS 26.5, bản Release
+ký bằng Personal Team) và Android, qua 4G + Tailscale.
 
 ## Rủi ro
 
