@@ -117,6 +117,12 @@ export function usePipecatApp(
           return;
         }
       }
+      // Every session starts with the mic as configured. DailyMediaManager
+      // keeps the last session's mute flag; starting a session with mic and
+      // cam both off throws in Daily ("getVideoTracks of undefined") and the
+      // reconnect hangs at "connecting".
+      const micOn = optionsRef.current.clientOptions?.enableMic ?? true;
+      if (activeClient.isMicEnabled !== micOn) activeClient.enableMic(micOn);
       if (startBotParams) {
         const response = await activeClient.startBot({
           requestData: {},
