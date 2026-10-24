@@ -9,11 +9,12 @@ import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
+import { ChatOrb } from "@/components/chat-orb";
 import { Controls } from "@/components/controls";
-import { StatusIndicator } from "@/components/status-indicator";
 import { Transcript } from "@/components/transcript";
 import { type AppConfig, config, configError } from "@/lib/config";
 import { useConversation } from "@/hooks/use-conversation";
+import { useOrbLevel } from "@/hooks/use-orb-level";
 import { usePipecatApp } from "@/hooks/use-pipecat-app";
 import { useVoicePhase } from "@/hooks/use-voice-phase";
 
@@ -72,6 +73,7 @@ function VoiceScreen({ config }: { config: AppConfig }) {
   const { transportState, messages, micEnabled, toggleMic } =
     useConversation(client);
   const voice = useVoicePhase(client, transportState, micEnabled);
+  const orbLevel = useOrbLevel(client, voice.levelSource);
   const failed = !voice.inCall && (!!error || transportState === "error");
 
   // Temporary check for step 2.2; remove once verified (docs/plans/mobile-app/phase-2.md).
@@ -82,11 +84,17 @@ function VoiceScreen({ config }: { config: AppConfig }) {
   return (
     <View style={styles.screen}>
       <Transcript messages={messages} />
-      <StatusIndicator
-        orbState={voice.orbState}
-        label={failed ? "Lỗi kết nối" : voice.statusLabel}
-        muted={voice.muted}
-      />
+      <View
+        style={styles.orb}
+        accessible
+        accessibilityLiveRegion="polite"
+        accessibilityLabel={failed ? "Lỗi kết nối" : voice.statusLabel}
+      >
+        <ChatOrb state={voice.orbState} level={orbLevel} muted={voice.muted} />
+        <Text style={styles.label}>
+          {failed ? "Lỗi kết nối" : voice.statusLabel}
+        </Text>
+      </View>
       {error && <Text style={styles.error}>{error}</Text>}
       <Controls
         inCall={voice.inCall}
@@ -107,18 +115,39 @@ function routeAudioToSpeaker(client: PipecatClient) {
   client.on(RTVIEvent.Connected, () => client.updateMic("SPEAKERPHONE"));
 }
 
-/** Temporary check for step 2.1: expect ~12 updates/s per side, not 2. */
+/**
+ * Temporary check for step 2.1 (expect ~12 updates/s per side, not 2) and
+ * for tuning the orb gain in use-orb-level.ts (spread of voiced levels).
+ * Remove once verified (docs/plans/mobile-app/phase-2.md).
+ */
 function logAudioLevelRate(client: PipecatClient) {
-  let local = 0;
-  let remote = 0;
-  client.on(RTVIEvent.LocalAudioLevel, () => local++);
-  client.on(RTVIEvent.RemoteAudioLevel, () => remote++);
+  const sides = {
+    local: { count: 0, voiced: [] as number[] },
+    remote: { count: 0, voiced: [] as number[] },
+  };
+  const record = (side: keyof typeof sides) => (level: number) => {
+    sides[side].count++;
+    if ((level ?? 0) > 0.01) sides[side].voiced.push(level);
+  };
+  client.on(RTVIEvent.LocalAudioLevel, record("local"));
+  client.on(RTVIEvent.RemoteAudioLevel, record("remote"));
   setInterval(() => {
-    if (local || remote) {
-      console.log(`[audio-level] local ${local / 5}/s, remote ${remote / 5}/s`);
+    const parts = Object.entries(sides)
+      .filter(([, s]) => s.count)
+      .map(([name, s]) => {
+        const sorted = [...s.voiced].sort((x, y) => x - y);
+        const pct = (q: number) =>
+          sorted[Math.floor(q * (sorted.length - 1))].toFixed(3);
+        const spread = sorted.length
+          ? ` (voiced p25 ${pct(0.25)} p50 ${pct(0.5)} p90 ${pct(0.9)})`
+          : "";
+        return `${name} ${s.count / 5}/s${spread}`;
+      });
+    if (parts.length) console.log(`[audio-level] ${parts.join(", ")}`);
+    for (const s of Object.values(sides)) {
+      s.count = 0;
+      s.voiced.length = 0;
     }
-    local = 0;
-    remote = 0;
   }, 5000);
 }
 
@@ -126,4 +155,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" },
   error: { color: "#dc2626", textAlign: "center", paddingHorizontal: 16 },
   configError: { marginTop: 48 },
+  orb: { alignItems: "center", gap: 16, paddingVertical: 16 },
+  label: { fontSize: 17, color: "#374151" },
 });

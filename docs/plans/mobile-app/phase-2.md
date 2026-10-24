@@ -149,7 +149,12 @@ Phần chuyển động (vòng `requestAnimationFrame` của web) chuyển sang 
 
 - **Mức âm thanh:** giá trị mới mỗi ~80 ms đặt làm *đích*; mỗi khung hình tiến dần
   về đích — lên nhanh (hệ số 0.35), xuống chậm (0.08) như web, nên không giật dù
-  dữ liệu thưa hơn web.
+  dữ liệu thưa hơn web. Hệ số tính theo thời gian thực của khung hình, nên màn
+  hình 120 Hz chuyển động cùng tốc độ.
+- **Đổi mức âm thanh sang độ phình:** `audioLevel` của WebRTC lớn hơn RMS mà web
+  đo, nên công thức của web (`(x − 0.008) × 7`) làm orb luôn phình hết cỡ. Đo trên
+  Android: giọng bot p25 ≈ 0.14, p50 ≈ 0.19, p90 ≈ 0.33 → dùng
+  `(x − 0.02) × 2.6` (ra ~0.3 / 0.45 / 0.8). Nằm ở `src/hooks/use-orb-level.ts`.
 - **Tốc độ mây** theo trạng thái (`DRIFT_SPEED`: idle 0.22, connecting 0.4,
   listening 0.3, thinking 1.1, speaking 0.45) cộng thêm theo mức âm thanh.
 - **Co giãn:** connecting thở chậm, thinking rung nhẹ, speaking phình tới 16%
@@ -281,6 +286,19 @@ Các bước đã viết code nhưng chưa thử hết trên máy. Xong mục n�
       ```
 
       Kiểm xong thì bỏ log `[phase]` trong `apps/mobile/src/App.tsx`.
+- [x] **2.3** Android (máy ảo): orb hiện đúng, mây trôi, phình theo giọng bot, nhạt
+      khi tắt mic, viền đổi theo chế độ tối.
+- [ ] **2.3** Orb phình theo giọng **bạn**. Log `[audio-level]` in `local … (voiced
+      p25 … p50 … p90 …)` khi bạn nói. Nếu mic khác hẳn bot (orb gần như không
+      phình, hoặc luôn phình hết cỡ), tách hệ số riêng cho mic trong
+      `use-orb-level.ts`.
+- [ ] **2.3** iPhone: shader chạy đúng (Skia trên iOS dùng Metal), mức âm thanh tương
+      tự Android.
+- [ ] **2.3** fps ≥ 55 trên iPhone và máy Android thật (máy ảo không đo được). Tụt
+      khung hình thì giảm `fbm` từ 5 xuống 3–4 vòng hoặc vẽ canvas nhỏ rồi phóng to.
+
+Log `[audio-level]` và `[phase]` trong `apps/mobile/src/App.tsx` chỉ chạy ở bản dev;
+bỏ khi các mục trên đã xong.
 
 ## Xong giai đoạn 2 khi
 
