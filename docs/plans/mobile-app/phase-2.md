@@ -263,6 +263,25 @@ Nếu 30 giây không giữ được trên một nền tảng, rút xuống "k�
 nền" cho nền tảng đó và ghi lại; giữ phiên thật sự ở nền là việc của giai đoạn 3
 (CallKit / foreground service).
 
+## Còn phải kiểm tra
+
+Các bước đã viết code nhưng chưa thử hết trên máy. Xong mục nào thì đánh dấu.
+
+- [x] **2.1** Android (máy ảo): log `[audio-level]` ~12 lần/giây.
+- [ ] **2.1** iPhone: sau khi build lại trên Mac, log `[audio-level]` cũng ~12 lần/giây.
+- [x] **2.2** Kết nối và lời chào: `connecting → listening → botSpeaking → listening`.
+- [ ] **2.2** Bạn nói và ngắt lời bot. Gọi bot, hỏi một câu dài, rồi nói chen vào khi
+      bot đang trả lời. Log `[phase]` trong Metro phải lần lượt là:
+
+      ```
+      userSpeaking -> orb speaking     ← bạn nói
+      thinking     -> orb thinking     ← bạn ngừng, bot đang nghĩ
+      botSpeaking  -> orb speaking     ← bot trả lời
+      userSpeaking -> orb speaking     ← bạn ngắt lời (không nhảy về listening)
+      ```
+
+      Kiểm xong thì bỏ log `[phase]` trong `apps/mobile/src/App.tsx`.
+
 ## Xong giai đoạn 2 khi
 
 - [ ] Orb trôi mây, phình theo giọng bot và giọng bạn, không thấy trễ rõ ràng.

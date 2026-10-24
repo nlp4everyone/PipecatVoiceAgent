@@ -8,12 +8,7 @@ import {
 } from "@pipecat-ai/client-js";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export type ConversationStatus =
-  | "idle"
-  | "connecting"
-  | "listening"
-  | "speaking"
-  | "error";
+import { CONNECTING_STATES } from "@/hooks/use-voice-phase";
 
 export interface ConversationMessage {
   id: string;
@@ -21,25 +16,17 @@ export interface ConversationMessage {
   text: string;
 }
 
-const CONNECTING_STATES: TransportState[] = [
-  "authenticating",
-  "authenticated",
-  "connecting",
-  "connected",
-];
-
 let nextId = 0;
 const newId = () => String(++nextId);
 
 /**
- * Status, transcript and mic state for one screen, from client events.
+ * Transport state, transcript and mic state for one screen, from client events.
  * Bot text comes from BotOutput (RTVI 2.x): one segment per sentence, updated
  * as it is spoken, so an interrupted sentence keeps only the spoken part.
  */
 export function useConversation(client: PipecatClient | null) {
   const [transportState, setTransportState] =
     useState<TransportState>("initialized");
-  const [botSpeaking, setBotSpeaking] = useState(false);
   const [micEnabled, setMicEnabled] = useState(true);
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
 
@@ -75,7 +62,6 @@ export function useConversation(client: PipecatClient | null) {
         commit([]);
       }
       setTransportState(state);
-      if (state !== "ready") setBotSpeaking(false);
       if (state === "ready") setMicEnabled(client.isMicEnabled);
     };
 
@@ -127,20 +113,13 @@ export function useConversation(client: PipecatClient | null) {
       commit(next.map((m) => (m.id === bubbleId ? { ...m, text: joined } : m)));
     };
 
-    const onBotStartedSpeaking = () => setBotSpeaking(true);
-    const onBotStoppedSpeaking = () => setBotSpeaking(false);
-
     client.on(RTVIEvent.TransportStateChanged, onTransportStateChanged);
     client.on(RTVIEvent.UserTranscript, onUserTranscript);
     client.on(RTVIEvent.BotOutput, onBotOutput);
-    client.on(RTVIEvent.BotStartedSpeaking, onBotStartedSpeaking);
-    client.on(RTVIEvent.BotStoppedSpeaking, onBotStoppedSpeaking);
     return () => {
       client.off(RTVIEvent.TransportStateChanged, onTransportStateChanged);
       client.off(RTVIEvent.UserTranscript, onUserTranscript);
       client.off(RTVIEvent.BotOutput, onBotOutput);
-      client.off(RTVIEvent.BotStartedSpeaking, onBotStartedSpeaking);
-      client.off(RTVIEvent.BotStoppedSpeaking, onBotStoppedSpeaking);
     };
   }, [client, commit]);
 
@@ -151,12 +130,5 @@ export function useConversation(client: PipecatClient | null) {
     setMicEnabled(enable);
   }, [client]);
 
-  let status: ConversationStatus;
-  if (transportState === "error") status = "error";
-  else if (CONNECTING_STATES.includes(transportState)) status = "connecting";
-  else if (transportState === "ready")
-    status = botSpeaking ? "speaking" : "listening";
-  else status = "idle";
-
-  return { status, transportState, messages, micEnabled, toggleMic };
+  return { transportState, messages, micEnabled, toggleMic };
 }

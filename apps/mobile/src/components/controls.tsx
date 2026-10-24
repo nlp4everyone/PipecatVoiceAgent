@@ -1,9 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { ConversationStatus } from "@/hooks/use-conversation";
-
 interface ControlsProps {
-  status: ConversationStatus;
+  inCall: boolean;
+  isReady: boolean;
+  failed: boolean;
   micEnabled: boolean;
   disabled: boolean;
   onConnect: () => void;
@@ -12,14 +12,16 @@ interface ControlsProps {
 }
 
 export function Controls({
-  status,
+  inCall,
+  isReady,
+  failed,
   micEnabled,
   disabled,
   onConnect,
   onDisconnect,
   onToggleMic,
 }: ControlsProps) {
-  if (status === "idle" || status === "error") {
+  if (!inCall) {
     return (
       <View style={styles.row}>
         <Pressable
@@ -32,7 +34,7 @@ export function Controls({
           ]}
         >
           <Text style={styles.startText}>
-            {status === "error" ? "Thử lại" : "Bắt đầu"}
+            {failed ? "Thử lại" : "Bắt đầu"}
           </Text>
         </Pressable>
       </View>
@@ -44,7 +46,7 @@ export function Controls({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={micEnabled ? "Tắt micro" : "Bật micro"}
-        disabled={status !== "listening" && status !== "speaking"}
+        disabled={!isReady}
         onPress={onToggleMic}
         style={({ pressed }) => [
           styles.round,

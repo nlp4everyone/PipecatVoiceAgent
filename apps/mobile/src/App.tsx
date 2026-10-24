@@ -5,6 +5,7 @@ import {
   type TransportConnectionParams,
 } from "@pipecat-ai/client-js";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
@@ -14,6 +15,7 @@ import { Transcript } from "@/components/transcript";
 import { type AppConfig, config, configError } from "@/lib/config";
 import { useConversation } from "@/hooks/use-conversation";
 import { usePipecatApp } from "@/hooks/use-pipecat-app";
+import { useVoicePhase } from "@/hooks/use-voice-phase";
 
 export default function App() {
   return (
@@ -67,16 +69,29 @@ function VoiceScreen({ config }: { config: AppConfig }) {
     },
   });
 
-  const { status, messages, micEnabled, toggleMic } = useConversation(client);
-  const shownStatus = error && status === "idle" ? "error" : status;
+  const { transportState, messages, micEnabled, toggleMic } =
+    useConversation(client);
+  const voice = useVoicePhase(client, transportState, micEnabled);
+  const failed = !voice.inCall && (!!error || transportState === "error");
+
+  // Temporary check for step 2.2; remove once verified (docs/plans/mobile-app/phase-2.md).
+  useEffect(() => {
+    if (__DEV__) console.log(`[phase] ${voice.phase} -> orb ${voice.orbState}`);
+  }, [voice.phase, voice.orbState]);
 
   return (
     <View style={styles.screen}>
       <Transcript messages={messages} />
-      <StatusIndicator status={shownStatus} />
+      <StatusIndicator
+        orbState={voice.orbState}
+        label={failed ? "Lỗi kết nối" : voice.statusLabel}
+        muted={voice.muted}
+      />
       {error && <Text style={styles.error}>{error}</Text>}
       <Controls
-        status={shownStatus}
+        inCall={voice.inCall}
+        isReady={voice.isReady}
+        failed={failed}
         micEnabled={micEnabled}
         disabled={!client}
         onConnect={() => void connect()}
