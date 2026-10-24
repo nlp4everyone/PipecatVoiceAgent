@@ -273,9 +273,9 @@ nền" cho nền tảng đó và ghi lại; giữ phiên thật sự ở nền l
 Các bước đã viết code nhưng chưa thử hết trên máy. Xong mục nào thì đánh dấu.
 
 - [x] **2.1** Android (máy ảo): log `[audio-level]` ~12 lần/giây.
-- [ ] **2.1** iPhone: sau khi build lại trên Mac, log `[audio-level]` cũng ~12 lần/giây.
+- [x] **2.1** iPhone: sau khi build lại trên Mac, log `[audio-level]` cũng ~12 lần/giây.
 - [x] **2.2** Kết nối và lời chào: `connecting → listening → botSpeaking → listening`.
-- [ ] **2.2** Bạn nói và ngắt lời bot. Gọi bot, hỏi một câu dài, rồi nói chen vào khi
+- [x] **2.2** Bạn nói và ngắt lời bot. Gọi bot, hỏi một câu dài, rồi nói chen vào khi
       bot đang trả lời. Log `[phase]` trong Metro phải lần lượt là:
 
       ```
@@ -288,23 +288,26 @@ Các bước đã viết code nhưng chưa thử hết trên máy. Xong mục n�
       Kiểm xong thì bỏ log `[phase]` trong `apps/mobile/src/App.tsx`.
 - [x] **2.3** Android (máy ảo): orb hiện đúng, mây trôi, phình theo giọng bot, nhạt
       khi tắt mic, viền đổi theo chế độ tối.
-- [ ] **2.3** Orb phình theo giọng **bạn**. Log `[audio-level]` in `local … (voiced
-      p25 … p50 … p90 …)` khi bạn nói. Nếu mic khác hẳn bot (orb gần như không
-      phình, hoặc luôn phình hết cỡ), tách hệ số riêng cho mic trong
-      `use-orb-level.ts`.
-- [ ] **2.3** iPhone: shader chạy đúng (Skia trên iOS dùng Metal), mức âm thanh tương
+- [x] **2.3** Orb phình theo giọng **bạn**. Đo trên iPhone: mic p25 ≈ 0.12–0.19,
+      p50 ≈ 0.19–0.30, p90 ≈ 0.37–0.51 — hơi to hơn bot nhưng orb không phình hết
+      cỡ, nên giữ chung hệ số trong `use-orb-level.ts`.
+- [x] **2.3** iPhone: shader chạy đúng (Skia trên iOS dùng Metal), mức âm thanh tương
       tự Android.
-- [ ] **2.3** fps ≥ 55 trên iPhone và máy Android thật (máy ảo không đo được). Tụt
-      khung hình thì giảm `fbm` từ 5 xuống 3–4 vòng hoặc vẽ canvas nhỏ rồi phóng to.
+- [x] **2.3** fps ≥ 55 trên iPhone: 60 fps (UI và JS), lên 120 khi màn hình ProMotion
+      tăng tần số.
+- [ ] **2.3** fps ≥ 55 trên máy Android thật (máy ảo không đo được). **Tạm hoãn — chưa
+      có máy.** Tụt khung hình thì giảm `fbm` từ 5 xuống 3–4 vòng hoặc vẽ canvas nhỏ
+      rồi phóng to.
 
 Log `[audio-level]` và `[phase]` trong `apps/mobile/src/App.tsx` chỉ chạy ở bản dev;
 bỏ khi các mục trên đã xong.
 
 ## Xong giai đoạn 2 khi
 
-- [ ] Orb trôi mây, phình theo giọng bot và giọng bạn, không thấy trễ rõ ràng.
-- [ ] Orb mượt (≥ 55 fps) trên cả iPhone và máy Android dự phòng.
-- [ ] Trạng thái đúng khi bạn nói, khi bot suy nghĩ, khi bot nói, khi ngắt lời bot.
+- [x] Orb trôi mây, phình theo giọng bot và giọng bạn, không thấy trễ rõ ràng.
+- [ ] Orb mượt (≥ 55 fps) trên cả iPhone và máy Android dự phòng. (iPhone đạt; Android
+      chờ có máy.)
+- [x] Trạng thái đúng khi bạn nói, khi bot suy nghĩ, khi bot nói, khi ngắt lời bot.
 - [ ] Phụ đề bot bật / tắt được; bảng hội thoại mở / đóng bằng nút và vuốt.
 - [ ] Có âm báo và rung khi bắt đầu, kết thúc, bật / tắt mic.
 - [ ] Mặc định loa ngoài, không vọng tiếng; AirPods / tai nghe tự chuyển.
