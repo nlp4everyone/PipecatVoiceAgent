@@ -1,0 +1,26 @@
+diff --git a/node_modules/@pipecat-ai/react-native-small-webrtc-transport/lib/commonjs/transport.js b/node_modules/@pipecat-ai/react-native-small-webrtc-transport/lib/commonjs/transport.js
+index 3b006f4..630940d 100644
+--- a/node_modules/@pipecat-ai/react-native-small-webrtc-transport/lib/commonjs/transport.js
++++ b/node_modules/@pipecat-ai/react-native-small-webrtc-transport/lib/commonjs/transport.js
+@@ -592,7 +592,7 @@ class RNSmallWebRTCTransport extends _clientJs.Transport {
+     // Sending the ice candidates
+     this._canSendIceCandidates = true;
+     await this.flushIceCandidates();
+-    this.audioLevelObserver.start(this.pc);
++    this.audioLevelObserver.start(this.pc, 80);
+   }
+   async addUserMedia() {
+     _clientJs.logger.debug(`addUserMedia this.tracks(): ${this.tracks()}`);
+diff --git a/node_modules/@pipecat-ai/react-native-small-webrtc-transport/lib/module/transport.js b/node_modules/@pipecat-ai/react-native-small-webrtc-transport/lib/module/transport.js
+index 46f3d17..ca90b88 100644
+--- a/node_modules/@pipecat-ai/react-native-small-webrtc-transport/lib/module/transport.js
++++ b/node_modules/@pipecat-ai/react-native-small-webrtc-transport/lib/module/transport.js
+@@ -587,7 +587,7 @@ export class RNSmallWebRTCTransport extends Transport {
+     // Sending the ice candidates
+     this._canSendIceCandidates = true;
+     await this.flushIceCandidates();
+-    this.audioLevelObserver.start(this.pc);
++    this.audioLevelObserver.start(this.pc, 80);
+   }
+   async addUserMedia() {
+     logger.debug(`addUserMedia this.tracks(): ${this.tracks()}`);

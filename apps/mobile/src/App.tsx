@@ -61,7 +61,10 @@ function VoiceScreen({ config }: { config: AppConfig }) {
             iceConfig: { iceServers: config.iceServers },
           }) as TransportConnectionParams
       : undefined,
-    onClient: routeAudioToSpeaker,
+    onClient: (client) => {
+      routeAudioToSpeaker(client);
+      if (__DEV__) logAudioLevelRate(client);
+    },
   });
 
   const { status, messages, micEnabled, toggleMic } = useConversation(client);
@@ -87,6 +90,21 @@ function VoiceScreen({ config }: { config: AppConfig }) {
 /** Bot audio defaults to the earpiece on phones; use the loudspeaker instead. */
 function routeAudioToSpeaker(client: PipecatClient) {
   client.on(RTVIEvent.Connected, () => client.updateMic("SPEAKERPHONE"));
+}
+
+/** Temporary check for step 2.1: expect ~12 updates/s per side, not 2. */
+function logAudioLevelRate(client: PipecatClient) {
+  let local = 0;
+  let remote = 0;
+  client.on(RTVIEvent.LocalAudioLevel, () => local++);
+  client.on(RTVIEvent.RemoteAudioLevel, () => remote++);
+  setInterval(() => {
+    if (local || remote) {
+      console.log(`[audio-level] local ${local / 5}/s, remote ${remote / 5}/s`);
+    }
+    local = 0;
+    remote = 0;
+  }, 5000);
 }
 
 const styles = StyleSheet.create({
