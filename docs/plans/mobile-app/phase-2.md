@@ -285,7 +285,6 @@ Các bước đã viết code nhưng chưa thử hết trên máy. Xong mục n�
       userSpeaking -> orb speaking     ← bạn ngắt lời (không nhảy về listening)
       ```
 
-      Kiểm xong thì bỏ log `[phase]` trong `apps/mobile/src/App.tsx`.
 - [x] **2.3** Android (máy ảo): orb hiện đúng, mây trôi, phình theo giọng bot, nhạt
       khi tắt mic, viền đổi theo chế độ tối.
 - [x] **2.3** Orb phình theo giọng **bạn**. Đo trên iPhone: mic p25 ≈ 0.12–0.19,
@@ -299,8 +298,8 @@ Các bước đã viết code nhưng chưa thử hết trên máy. Xong mục n�
       có máy.** Tụt khung hình thì giảm `fbm` từ 5 xuống 3–4 vòng hoặc vẽ canvas nhỏ
       rồi phóng to.
 
-Log `[audio-level]` và `[phase]` trong `apps/mobile/src/App.tsx` chỉ chạy ở bản dev;
-bỏ khi các mục trên đã xong.
+Log tạm `[audio-level]` và `[phase]` đã bỏ khỏi `apps/mobile/src/App.tsx` sau khi
+kiểm xong; đo fps Android thì dùng Performance Monitor, không cần log.
 
 ## Xong giai đoạn 2 khi
 
