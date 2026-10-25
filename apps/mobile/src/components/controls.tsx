@@ -1,74 +1,93 @@
+import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 interface ControlsProps {
-  inCall: boolean;
   isReady: boolean;
-  failed: boolean;
   micEnabled: boolean;
-  disabled: boolean;
-  onConnect: () => void;
-  onDisconnect: () => void;
+  captionsOn: boolean;
+  chatOpen: boolean;
+  onToggleCaptions: () => void;
+  onToggleChat: () => void;
   onToggleMic: () => void;
+  onDisconnect: () => void;
 }
 
+/** In-call button row: captions · conversation · mic · end (like the web footer). */
 export function Controls({
-  inCall,
   isReady,
-  failed,
   micEnabled,
-  disabled,
-  onConnect,
-  onDisconnect,
+  captionsOn,
+  chatOpen,
+  onToggleCaptions,
+  onToggleChat,
   onToggleMic,
+  onDisconnect,
 }: ControlsProps) {
-  if (!inCall) {
-    return (
-      <View style={styles.row}>
-        <Pressable
-          accessibilityRole="button"
-          disabled={disabled}
-          onPress={onConnect}
-          style={({ pressed }) => [
-            styles.start,
-            (pressed || disabled) && styles.dimmed,
-          ]}
-        >
-          <Text style={styles.startText}>
-            {failed ? "Thử lại" : "Bắt đầu"}
-          </Text>
-        </Pressable>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.row}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={micEnabled ? "Tắt micro" : "Bật micro"}
+      <RoundButton
+        label={captionsOn ? "Tắt phụ đề" : "Bật phụ đề"}
+        active={!captionsOn}
+        onPress={onToggleCaptions}
+      >
+        <Text style={[styles.cc, !captionsOn && styles.ccOff]}>CC</Text>
+      </RoundButton>
+      <RoundButton
+        label={chatOpen ? "Ẩn hội thoại" : "Xem hội thoại"}
+        active={chatOpen}
+        onPress={onToggleChat}
+      >
+        <Text style={styles.icon}>💬</Text>
+      </RoundButton>
+      <RoundButton
+        label={micEnabled ? "Tắt micro" : "Bật micro"}
+        active={!micEnabled}
         disabled={!isReady}
         onPress={onToggleMic}
-        style={({ pressed }) => [
-          styles.round,
-          !micEnabled && styles.muted,
-          pressed && styles.dimmed,
-        ]}
       >
         <Text style={styles.icon}>{micEnabled ? "🎤" : "🔇"}</Text>
-      </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Kết thúc"
-        onPress={onDisconnect}
-        style={({ pressed }) => [
-          styles.round,
-          styles.end,
-          pressed && styles.dimmed,
-        ]}
-      >
+      </RoundButton>
+      <RoundButton label="Kết thúc" variant="end" onPress={onDisconnect}>
         <Text style={[styles.icon, styles.endIcon]}>✕</Text>
-      </Pressable>
+      </RoundButton>
     </View>
+  );
+}
+
+interface RoundButtonProps {
+  label: string;
+  onPress: () => void;
+  children: ReactNode;
+  active?: boolean;
+  disabled?: boolean;
+  variant?: "default" | "end";
+}
+
+function RoundButton({
+  label,
+  onPress,
+  children,
+  active = false,
+  disabled = false,
+  variant = "default",
+}: RoundButtonProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled, selected: active }}
+      disabled={disabled}
+      onPress={onPress}
+      hitSlop={6}
+      style={({ pressed }) => [
+        styles.round,
+        active && styles.active,
+        variant === "end" && styles.end,
+        (pressed || disabled) && styles.dimmed,
+      ]}
+    >
+      {children}
+    </Pressable>
   );
 }
 
@@ -76,27 +95,22 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 48,
-    paddingVertical: 24,
+    alignItems: "center",
+    gap: 20,
   },
-  start: {
-    backgroundColor: "#111827",
-    paddingHorizontal: 40,
-    paddingVertical: 16,
-    borderRadius: 999,
-  },
-  startText: { color: "#fff", fontSize: 17, fontWeight: "600" },
   round: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#e5e7eb",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#f3f4f6",
     alignItems: "center",
     justifyContent: "center",
   },
-  muted: { backgroundColor: "#fde68a" },
+  active: { backgroundColor: "#d1d5db" },
   end: { backgroundColor: "#ef4444" },
-  icon: { fontSize: 26 },
-  endIcon: { color: "#fff" },
-  dimmed: { opacity: 0.5 },
+  icon: { fontSize: 24 },
+  endIcon: { color: "#fff", fontWeight: "600" },
+  cc: { fontSize: 16, fontWeight: "700", color: "#111827" },
+  ccOff: { color: "#9ca3af", textDecorationLine: "line-through" },
+  dimmed: { opacity: 0.4 },
 });
