@@ -6,7 +6,13 @@ import {
 } from "@pipecat-ai/client-js";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { ChatOrb } from "@/components/chat-orb";
@@ -73,6 +79,11 @@ function VoiceScreen({ config }: { config: AppConfig }) {
   const orbLevel = useOrbLevel(client, voice.levelSource);
   const failed = !voice.inCall && (!!error || transportState === "error");
 
+  // Orb scales with the screen; the text block hangs below it without moving it.
+  const { width } = useWindowDimensions();
+  const orbSize = Math.min(width * 0.6, 280);
+  const belowWidth = Math.min(width - 32, 560);
+
   const [captionsOn, setCaptionsOn] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
 
@@ -102,40 +113,54 @@ function VoiceScreen({ config }: { config: AppConfig }) {
   return (
     <View style={styles.screen}>
       <View style={styles.stage}>
-        <Pressable
-          onPress={start}
-          disabled={voice.inCall || !client}
-          accessibilityRole={voice.inCall ? undefined : "button"}
-          accessibilityLabel={
-            voice.inCall ? voice.statusLabel : "Bắt đầu trò chuyện"
-          }
-          accessibilityLiveRegion="polite"
-        >
-          <ChatOrb state={voice.orbState} level={orbLevel} muted={voice.muted} />
-        </Pressable>
+        <View style={{ width: orbSize, height: orbSize }}>
+          <Pressable
+            onPress={start}
+            disabled={voice.inCall || !client}
+            accessibilityRole={voice.inCall ? undefined : "button"}
+            accessibilityLabel={
+              voice.inCall ? voice.statusLabel : "Bắt đầu trò chuyện"
+            }
+            accessibilityLiveRegion="polite"
+          >
+            <ChatOrb
+              state={voice.orbState}
+              level={orbLevel}
+              muted={voice.muted}
+              size={orbSize}
+            />
+          </Pressable>
 
-        <View style={styles.below}>
-          {hint && <Text style={styles.hint}>{hint}</Text>}
-          {!!caption && (
-            <Text style={styles.caption} numberOfLines={4}>
-              {caption}
-            </Text>
-          )}
-          {failed && (
-            <Pressable
-              onPress={start}
-              accessibilityRole="button"
-              accessibilityLabel="Lỗi kết nối. Chạm để thử lại"
-              style={styles.errorBox}
-            >
-              <Text style={styles.error}>Không kết nối được. Chạm để thử lại.</Text>
-              {error && (
-                <Text style={styles.errorDetail} numberOfLines={2}>
-                  {error}
+          <View
+            style={[
+              styles.below,
+              { width: belowWidth, left: (orbSize - belowWidth) / 2 },
+            ]}
+          >
+            {hint && <Text style={styles.hint}>{hint}</Text>}
+            {!!caption && (
+              <Text style={styles.caption} numberOfLines={4}>
+                {caption}
+              </Text>
+            )}
+            {failed && (
+              <Pressable
+                onPress={start}
+                accessibilityRole="button"
+                accessibilityLabel="Lỗi kết nối. Chạm để thử lại"
+                style={styles.errorBox}
+              >
+                <Text style={styles.error}>
+                  Không kết nối được. Chạm để thử lại.
                 </Text>
-              )}
-            </Pressable>
-          )}
+                {error && (
+                  <Text style={styles.errorDetail} numberOfLines={2}>
+                    {error}
+                  </Text>
+                )}
+              </Pressable>
+            )}
+          </View>
         </View>
       </View>
 
@@ -178,13 +203,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 32,
-    paddingHorizontal: 16,
+    // Offsets the footer so the orb sits at the centre of the whole screen.
+    paddingTop: FOOTER_HEIGHT,
   },
   below: {
-    minHeight: 112,
-    width: "100%",
-    maxWidth: 560,
+    position: "absolute",
+    top: "100%",
+    marginTop: 32,
     alignItems: "center",
     gap: 8,
   },
