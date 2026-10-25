@@ -1,5 +1,7 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+
+import { type Theme, useTheme } from "@/lib/theme";
 
 interface ControlsProps {
   isReady: boolean;
@@ -23,6 +25,7 @@ export function Controls({
   onToggleMic,
   onDisconnect,
 }: ControlsProps) {
+  const styles = useStyles();
   return (
     <View style={styles.row}>
       <RoundButton
@@ -71,6 +74,7 @@ function RoundButton({
   disabled = false,
   variant = "default",
 }: RoundButtonProps) {
+  const styles = useStyles();
   return (
     <Pressable
       accessibilityRole="button"
@@ -91,26 +95,32 @@ function RoundButton({
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 20,
-  },
-  round: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#f3f4f6",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  active: { backgroundColor: "#d1d5db" },
-  end: { backgroundColor: "#ef4444" },
-  icon: { fontSize: 24 },
-  endIcon: { color: "#fff", fontWeight: "600" },
-  cc: { fontSize: 16, fontWeight: "700", color: "#111827" },
-  ccOff: { color: "#9ca3af", textDecorationLine: "line-through" },
-  dimmed: { opacity: 0.4 },
-});
+function useStyles() {
+  const theme = useTheme();
+  return useMemo(() => createStyles(theme), [theme]);
+}
+
+const createStyles = (t: Theme) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: 20,
+    },
+    round: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      backgroundColor: t.button,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    active: { backgroundColor: t.buttonActive },
+    end: { backgroundColor: "#ef4444" },
+    icon: { fontSize: 24 },
+    endIcon: { color: "#fff", fontWeight: "600" },
+    cc: { fontSize: 16, fontWeight: "700", color: t.text },
+    ccOff: { color: t.textFaint, textDecorationLine: "line-through" },
+    dimmed: { opacity: 0.4 },
+  });

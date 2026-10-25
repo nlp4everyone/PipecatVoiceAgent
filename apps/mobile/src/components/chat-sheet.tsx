@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -7,6 +7,8 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
+
+import { type Theme, useTheme } from "@/lib/theme";
 
 interface ChatSheetProps {
   open: boolean;
@@ -26,6 +28,8 @@ export function ChatSheet({
   bottomInset,
   children,
 }: ChatSheetProps) {
+  const theme = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { height } = useWindowDimensions();
   // Further down than the sheet is tall, so the closed sheet is off-screen.
   const hidden = height * 0.6;
@@ -69,29 +73,30 @@ export function ChatSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  sheet: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: "45%",
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: "#e5e7eb",
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  header: { alignItems: "center", paddingTop: 8, paddingBottom: 4 },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#d1d5db",
-    marginBottom: 8,
-  },
-  title: { fontSize: 15, fontWeight: "600", color: "#111827" },
-});
+const createStyles = (t: Theme) =>
+  StyleSheet.create({
+    sheet: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: "45%",
+      backgroundColor: t.background,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderColor: t.border,
+      shadowColor: "#000",
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 8,
+    },
+    header: { alignItems: "center", paddingTop: 8, paddingBottom: 4 },
+    handle: {
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: t.handle,
+      marginBottom: 8,
+    },
+    title: { fontSize: 15, fontWeight: "600", color: t.text },
+  });

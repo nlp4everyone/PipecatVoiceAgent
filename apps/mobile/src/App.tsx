@@ -6,7 +6,7 @@ import {
 } from "@pipecat-ai/client-js";
 import { scheduleOnRN } from "react-native-worklets";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Gesture,
   GestureDetector,
@@ -26,6 +26,7 @@ import { ChatSheet } from "@/components/chat-sheet";
 import { Controls } from "@/components/controls";
 import { Transcript } from "@/components/transcript";
 import { type AppConfig, config, configError } from "@/lib/config";
+import { type Theme, useTheme } from "@/lib/theme";
 import { useConversation } from "@/hooks/use-conversation";
 import { useCaptionsSetting } from "@/hooks/use-captions-setting";
 import { useOrbLevel } from "@/hooks/use-orb-level";
@@ -33,10 +34,12 @@ import { usePipecatApp } from "@/hooks/use-pipecat-app";
 import { useVoicePhase } from "@/hooks/use-voice-phase";
 
 export default function App() {
+  const theme = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   return (
     <GestureHandlerRootView style={styles.screen}>
       <SafeAreaProvider>
-        <StatusBar style="dark" />
+        <StatusBar style={theme.statusBar} />
         <SafeAreaView style={styles.screen}>
           {config ? (
             <VoiceScreen config={config} />
@@ -52,6 +55,8 @@ export default function App() {
 }
 
 function VoiceScreen({ config }: { config: AppConfig }) {
+  const theme = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   // Same request as the web app (apps/web/src/App.tsx), so the bot needs no
   // changes. The transport derives the offer URL from this endpoint:
   // .../start -> .../sessions/{id}/api/offer, reusing the same headers.
@@ -227,37 +232,38 @@ function routeAudioToSpeaker(client: PipecatClient) {
 
 const FOOTER_HEIGHT = 112;
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#fff" },
-  stage: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    // Offsets the footer so the orb sits at the centre of the whole screen.
-    paddingTop: FOOTER_HEIGHT,
-  },
-  below: {
-    position: "absolute",
-    top: "100%",
-    marginTop: 32,
-    alignItems: "center",
-    gap: 8,
-  },
-  hint: { fontSize: 15, color: "#6b7280" },
-  caption: {
-    fontSize: 20,
-    lineHeight: 28,
-    color: "#111827",
-    textAlign: "center",
-  },
-  errorBox: { alignItems: "center", gap: 4, paddingHorizontal: 16 },
-  error: { color: "#dc2626", fontSize: 15, textAlign: "center" },
-  errorDetail: { color: "#9ca3af", fontSize: 12, textAlign: "center" },
-  configError: { marginTop: 48, paddingHorizontal: 16 },
-  footer: {
-    height: FOOTER_HEIGHT,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingBottom: 16,
-  },
-});
+const createStyles = (t: Theme) =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: t.background },
+    stage: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      // Offsets the footer so the orb sits at the centre of the whole screen.
+      paddingTop: FOOTER_HEIGHT,
+    },
+    below: {
+      position: "absolute",
+      top: "100%",
+      marginTop: 32,
+      alignItems: "center",
+      gap: 8,
+    },
+    hint: { fontSize: 15, color: t.textMuted },
+    caption: {
+      fontSize: 20,
+      lineHeight: 28,
+      color: t.text,
+      textAlign: "center",
+    },
+    errorBox: { alignItems: "center", gap: 4, paddingHorizontal: 16 },
+    error: { color: t.error, fontSize: 15, textAlign: "center" },
+    errorDetail: { color: t.textFaint, fontSize: 12, textAlign: "center" },
+    configError: { marginTop: 48, paddingHorizontal: 16 },
+    footer: {
+      height: FOOTER_HEIGHT,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingBottom: 16,
+    },
+  });
