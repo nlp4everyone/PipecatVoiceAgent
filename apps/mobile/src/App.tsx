@@ -4,8 +4,14 @@ import {
   RTVIEvent,
   type TransportConnectionParams,
 } from "@pipecat-ai/client-js";
+import { scheduleOnRN } from "react-native-worklets";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
 import {
   Pressable,
   StyleSheet,
@@ -16,26 +22,32 @@ import {
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { ChatOrb } from "@/components/chat-orb";
+import { ChatSheet } from "@/components/chat-sheet";
 import { Controls } from "@/components/controls";
 import { Transcript } from "@/components/transcript";
 import { type AppConfig, config, configError } from "@/lib/config";
 import { useConversation } from "@/hooks/use-conversation";
+import { useCaptionsSetting } from "@/hooks/use-captions-setting";
 import { useOrbLevel } from "@/hooks/use-orb-level";
 import { usePipecatApp } from "@/hooks/use-pipecat-app";
 import { useVoicePhase } from "@/hooks/use-voice-phase";
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <StatusBar style="dark" />
-      <SafeAreaView style={styles.screen}>
-        {config ? (
-          <VoiceScreen config={config} />
-        ) : (
-          <Text style={[styles.error, styles.configError]}>{configError}</Text>
-        )}
-      </SafeAreaView>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={styles.screen}>
+      <SafeAreaProvider>
+        <StatusBar style="dark" />
+        <SafeAreaView style={styles.screen}>
+          {config ? (
+            <VoiceScreen config={config} />
+          ) : (
+            <Text style={[styles.error, styles.configError]}>
+              {configError}
+            </Text>
+          )}
+        </SafeAreaView>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -84,7 +96,7 @@ function VoiceScreen({ config }: { config: AppConfig }) {
   const orbSize = Math.min(width * 0.6, 280);
   const belowWidth = Math.min(width - 32, 560);
 
-  const [captionsOn, setCaptionsOn] = useState(true);
+  const { captionsOn, toggleCaptions } = useCaptionsSetting();
   const [chatOpen, setChatOpen] = useState(false);
 
   const start = () => void connect();
@@ -98,8 +110,8 @@ function VoiceScreen({ config }: { config: AppConfig }) {
         ? "Micro đang tắt"
         : null;
 
-  // Bot captions, hidden while the user holds the turn (like web). Step 2.5
-  // replaces this with word-by-word captions and a remembered CC setting.
+  // Bot captions grow word by word (BotOutput) and show the sentence being
+  // spoken; hidden while the user holds the turn (like web).
   const lastMessage = messages.at(-1);
   const caption =
     captionsOn &&
@@ -107,62 +119,74 @@ function VoiceScreen({ config }: { config: AppConfig }) {
     voice.phase !== "userSpeaking" &&
     voice.phase !== "thinking" &&
     lastMessage?.role === "bot"
-      ? lastMessage.text
+      ? lastSentence(lastMessage.text)
       : "";
+
+  // Swipe up anywhere on the stage to open the conversation sheet.
+  const openChat = Gesture.Pan()
+    .enabled(voice.inCall && !chatOpen)
+    .activeOffsetY([-20, 20])
+    .failOffsetX([-20, 20])
+    .onEnd((e) => {
+      if (e.translationY < -60 || e.velocityY < -600)
+        scheduleOnRN(setChatOpen, true);
+    });
 
   return (
     <View style={styles.screen}>
-      <View style={styles.stage}>
-        <View style={{ width: orbSize, height: orbSize }}>
-          <Pressable
-            onPress={start}
-            disabled={voice.inCall || !client}
-            accessibilityRole={voice.inCall ? undefined : "button"}
-            accessibilityLabel={
-              voice.inCall ? voice.statusLabel : "Bắt đầu trò chuyện"
-            }
-            accessibilityLiveRegion="polite"
-          >
-            <ChatOrb
-              state={voice.orbState}
-              level={orbLevel}
-              muted={voice.muted}
-              size={orbSize}
-            />
-          </Pressable>
+      <GestureDetector gesture={openChat}>
+        <View style={styles.stage}>
+          <View style={{ width: orbSize, height: orbSize }}>
+            <Pressable
+              onPress={start}
+              disabled={voice.inCall || !client}
+              accessibilityRole={voice.inCall ? undefined : "button"}
+              accessibilityLabel={
+                voice.inCall ? voice.statusLabel : "Bắt đầu trò chuyện"
+              }
+              accessibilityLiveRegion="polite"
+            >
+              <ChatOrb
+                state={voice.orbState}
+                level={orbLevel}
+                muted={voice.muted}
+                size={orbSize}
+              />
+            </Pressable>
 
-          <View
-            style={[
-              styles.below,
-              { width: belowWidth, left: (orbSize - belowWidth) / 2 },
-            ]}
-          >
-            {hint && <Text style={styles.hint}>{hint}</Text>}
-            {!!caption && (
-              <Text style={styles.caption} numberOfLines={4}>
-                {caption}
-              </Text>
-            )}
-            {failed && (
-              <Pressable
-                onPress={start}
-                accessibilityRole="button"
-                accessibilityLabel="Lỗi kết nối. Chạm để thử lại"
-                style={styles.errorBox}
-              >
-                <Text style={styles.error}>
-                  Không kết nối được. Chạm để thử lại.
+            <View
+              style={[
+                styles.below,
+                { width: belowWidth, left: (orbSize - belowWidth) / 2 },
+              ]}
+            >
+              {hint && <Text style={styles.hint}>{hint}</Text>}
+              {!!caption && (
+                <Text style={styles.caption} numberOfLines={4}>
+                  {caption}
                 </Text>
-                {error && (
-                  <Text style={styles.errorDetail} numberOfLines={2}>
-                    {error}
+              )}
+              {failed && (
+                <Pressable
+                  onPress={start}
+                  accessibilityRole="button"
+                  accessibilityLabel="Lỗi kết nối. Chạm để thử lại"
+                  style={styles.errorBox}
+                >
+                  <Text style={styles.error}>
+                    Không kết nối được. Chạm để thử lại.
                   </Text>
-                )}
-              </Pressable>
-            )}
+                  {error && (
+                    <Text style={styles.errorDetail} numberOfLines={2}>
+                      {error}
+                    </Text>
+                  )}
+                </Pressable>
+              )}
+            </View>
           </View>
         </View>
-      </View>
+      </GestureDetector>
 
       <View style={styles.footer}>
         {voice.inCall && (
@@ -171,7 +195,7 @@ function VoiceScreen({ config }: { config: AppConfig }) {
             micEnabled={micEnabled}
             captionsOn={captionsOn}
             chatOpen={chatOpen}
-            onToggleCaptions={() => setCaptionsOn((v) => !v)}
+            onToggleCaptions={toggleCaptions}
             onToggleChat={() => setChatOpen((v) => !v)}
             onToggleMic={toggleMic}
             onDisconnect={() => void disconnect()}
@@ -179,15 +203,21 @@ function VoiceScreen({ config }: { config: AppConfig }) {
         )}
       </View>
 
-      {/* Step 2.5 turns this into a swipeable bottom sheet. */}
-      {voice.inCall && chatOpen && (
-        <View style={styles.chat}>
-          <Text style={styles.chatTitle}>Hội thoại</Text>
-          <Transcript messages={messages} />
-        </View>
-      )}
+      <ChatSheet
+        open={voice.inCall && chatOpen}
+        onOpenChange={setChatOpen}
+        bottomInset={FOOTER_HEIGHT}
+      >
+        <Transcript messages={messages} />
+      </ChatSheet>
     </View>
   );
+}
+
+/** The sentence currently being spoken (captions show one at a time). */
+function lastSentence(text: string) {
+  const sentences = text.trim().split(/(?<=[.!?…])\s+/);
+  return sentences.at(-1) ?? "";
 }
 
 /** Bot audio defaults to the earpiece on phones; use the loudspeaker instead. */
@@ -229,28 +259,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingBottom: 16,
-  },
-  chat: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: "45%",
-    bottom: FOOTER_HEIGHT,
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: "#e5e7eb",
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  chatTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#111827",
-    paddingHorizontal: 16,
-    paddingTop: 14,
   },
 });
