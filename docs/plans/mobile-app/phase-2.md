@@ -299,6 +299,9 @@ Các bước đã viết code nhưng chưa thử hết trên máy. Xong mục n�
       rồi phóng to.
 - [x] **2.4** iPhone (bản Release): chưa gọi chỉ có orb và dòng gợi ý, chạm orb để
       bắt đầu; trong cuộc gọi có hàng nút CC · 💬 · 🎤 · ✕ và dòng "Micro đang tắt".
+- [x] **2.5** iPhone (bản Release): CC bật / tắt và nhớ sau khi mở lại app; phụ đề hiện
+      từng câu bot đang nói; bảng hội thoại mở bằng nút 💬 hoặc vuốt lên, đóng bằng
+      vuốt xuống thanh tiêu đề; cuộn danh sách không làm bảng tự đóng.
 
 Log tạm `[audio-level]` và `[phase]` đã bỏ khỏi `apps/mobile/src/App.tsx` sau khi
 kiểm xong; đo fps Android thì dùng Performance Monitor, không cần log.
@@ -309,7 +312,7 @@ kiểm xong; đo fps Android thì dùng Performance Monitor, không cần log.
 - [ ] Orb mượt (≥ 55 fps) trên cả iPhone và máy Android dự phòng. (iPhone đạt; Android
       chờ có máy.)
 - [x] Trạng thái đúng khi bạn nói, khi bot suy nghĩ, khi bot nói, khi ngắt lời bot.
-- [ ] Phụ đề bot bật / tắt được; bảng hội thoại mở / đóng bằng nút và vuốt.
+- [x] Phụ đề bot bật / tắt được; bảng hội thoại mở / đóng bằng nút và vuốt.
 - [ ] Có âm báo và rung khi bắt đầu, kết thúc, bật / tắt mic.
 - [ ] Mặc định loa ngoài, không vọng tiếng; AirPods / tai nghe tự chuyển.
 - [ ] Màn hình không tắt trong lúc gọi.
