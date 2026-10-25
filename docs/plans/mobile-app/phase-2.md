@@ -297,6 +297,8 @@ Các bước đã viết code nhưng chưa thử hết trên máy. Xong mục n�
 - [ ] **2.3** fps ≥ 55 trên máy Android thật (máy ảo không đo được). **Tạm hoãn — chưa
       có máy.** Tụt khung hình thì giảm `fbm` từ 5 xuống 3–4 vòng hoặc vẽ canvas nhỏ
       rồi phóng to.
+- [x] **2.4** iPhone (bản Release): chưa gọi chỉ có orb và dòng gợi ý, chạm orb để
+      bắt đầu; trong cuộc gọi có hàng nút CC · 💬 · 🎤 · ✕ và dòng "Micro đang tắt".
 
 Log tạm `[audio-level]` và `[phase]` đã bỏ khỏi `apps/mobile/src/App.tsx` sau khi
 kiểm xong; đo fps Android thì dùng Performance Monitor, không cần log.
