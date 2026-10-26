@@ -1,7 +1,5 @@
 import {
   type APIRequest,
-  type PipecatClient,
-  RTVIEvent,
   type TransportConnectionParams,
 } from "@pipecat-ai/client-js";
 import { scheduleOnRN } from "react-native-worklets";
@@ -27,6 +25,7 @@ import { ChatSheet } from "@/components/chat-sheet";
 import { Controls } from "@/components/controls";
 import { Transcript } from "@/components/transcript";
 import { type AppConfig, config, configError } from "@/lib/config";
+import { routeAudioOutput } from "@/lib/audio-route";
 import { type Theme, useTheme } from "@/lib/theme";
 import { useConversation } from "@/hooks/use-conversation";
 import { useCallFeedback } from "@/hooks/use-call-feedback";
@@ -89,7 +88,7 @@ function VoiceScreen({ config }: { config: AppConfig }) {
             iceConfig: { iceServers: config.iceServers },
           }) as TransportConnectionParams
       : undefined,
-    onClient: routeAudioToSpeaker,
+    onClient: routeAudioOutput,
   });
 
   const { transportState, messages, micEnabled, toggleMic } =
@@ -229,11 +228,6 @@ function VoiceScreen({ config }: { config: AppConfig }) {
 function lastSentence(text: string) {
   const sentences = text.trim().split(/(?<=[.!?…])\s+/);
   return sentences.at(-1) ?? "";
-}
-
-/** Bot audio defaults to the earpiece on phones; use the loudspeaker instead. */
-function routeAudioToSpeaker(client: PipecatClient) {
-  client.on(RTVIEvent.Connected, () => client.updateMic("SPEAKERPHONE"));
 }
 
 const FOOTER_HEIGHT = 112;
