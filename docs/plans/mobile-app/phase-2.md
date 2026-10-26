@@ -307,6 +307,10 @@ Các bước đã viết code nhưng chưa thử hết trên máy. Xong mục n�
       `expo-audio` chiếm audio session của cuộc gọi nên bot im (thử cả `allowsRecording`
       và `mixWithOthers` vẫn im). Muốn có chuông thì phải phát qua native module riêng
       (xem 2.7).
+- [x] **2.7** iPhone (bản Release): mặc định loa ngoài, bot nói to và không tự ngắt lời.
+- [ ] **2.7** Cắm / rút tai nghe dây và bật / tắt AirPods giữa cuộc gọi: tự chuyển đường
+      ra. Code đã viết (`lib/audio-route.ts`, đối chiếu với code native của Daily) nhưng
+      **chưa thử trên máy** vì chưa có tai nghe.
 
 Log tạm `[audio-level]` và `[phase]` đã bỏ khỏi `apps/mobile/src/App.tsx` sau khi
 kiểm xong; đo fps Android thì dùng Performance Monitor, không cần log.
@@ -319,7 +323,7 @@ kiểm xong; đo fps Android thì dùng Performance Monitor, không cần log.
 - [x] Trạng thái đúng khi bạn nói, khi bot suy nghĩ, khi bot nói, khi ngắt lời bot.
 - [x] Phụ đề bot bật / tắt được; bảng hội thoại mở / đóng bằng nút và vuốt.
 - [x] Có rung khi bắt đầu, kết thúc, bật / tắt mic. (Âm báo bỏ: xem 2.6.)
-- [ ] Mặc định loa ngoài, không vọng tiếng; AirPods / tai nghe tự chuyển.
+- [ ] Mặc định loa ngoài, không vọng tiếng; AirPods / tai nghe tự chuyển. (Loa ngoài đạt; tự chuyển tai nghe chưa thử.)
 - [x] Màn hình không tắt trong lúc gọi.
 - [ ] Xuống nền < 30 giây rồi quay lại vẫn nói tiếp được (hoặc đã ghi lại nền tảng
       nào không giữ được).
