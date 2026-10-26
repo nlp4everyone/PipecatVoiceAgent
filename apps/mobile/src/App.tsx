@@ -5,6 +5,7 @@ import {
   type TransportConnectionParams,
 } from "@pipecat-ai/client-js";
 import { scheduleOnRN } from "react-native-worklets";
+import * as Haptics from "expo-haptics";
 import { StatusBar } from "expo-status-bar";
 import { useMemo, useState } from "react";
 import {
@@ -28,6 +29,7 @@ import { Transcript } from "@/components/transcript";
 import { type AppConfig, config, configError } from "@/lib/config";
 import { type Theme, useTheme } from "@/lib/theme";
 import { useConversation } from "@/hooks/use-conversation";
+import { useCallFeedback } from "@/hooks/use-call-feedback";
 import { useCaptionsSetting } from "@/hooks/use-captions-setting";
 import { useOrbLevel } from "@/hooks/use-orb-level";
 import { usePipecatApp } from "@/hooks/use-pipecat-app";
@@ -93,6 +95,7 @@ function VoiceScreen({ config }: { config: AppConfig }) {
   const { transportState, messages, micEnabled, toggleMic } =
     useConversation(client);
   const voice = useVoicePhase(client, transportState, micEnabled);
+  useCallFeedback(transportState, voice.inCall);
   const orbLevel = useOrbLevel(client, voice.levelSource);
   const failed = !voice.inCall && (!!error || transportState === "error");
 
@@ -202,7 +205,10 @@ function VoiceScreen({ config }: { config: AppConfig }) {
             chatOpen={chatOpen}
             onToggleCaptions={toggleCaptions}
             onToggleChat={() => setChatOpen((v) => !v)}
-            onToggleMic={toggleMic}
+            onToggleMic={() => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              toggleMic();
+            }}
             onDisconnect={() => void disconnect()}
           />
         )}
