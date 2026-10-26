@@ -302,6 +302,11 @@ Các bước đã viết code nhưng chưa thử hết trên máy. Xong mục n�
 - [x] **2.5** iPhone (bản Release): CC bật / tắt và nhớ sau khi mở lại app; phụ đề hiện
       từng câu bot đang nói; bảng hội thoại mở bằng nút 💬 hoặc vuốt lên, đóng bằng
       vuốt xuống thanh tiêu đề; cuộn danh sách không làm bảng tự đóng.
+- [x] **2.6** iPhone (bản Release): rung khi kết nối / kết thúc / lỗi / bật tắt mic, màn
+      hình không tắt khi đang gọi, sáng / tối theo hệ thống. **Không có âm báo:**
+      `expo-audio` chiếm audio session của cuộc gọi nên bot im (thử cả `allowsRecording`
+      và `mixWithOthers` vẫn im). Muốn có chuông thì phải phát qua native module riêng
+      (xem 2.7).
 
 Log tạm `[audio-level]` và `[phase]` đã bỏ khỏi `apps/mobile/src/App.tsx` sau khi
 kiểm xong; đo fps Android thì dùng Performance Monitor, không cần log.
@@ -313,9 +318,9 @@ kiểm xong; đo fps Android thì dùng Performance Monitor, không cần log.
       chờ có máy.)
 - [x] Trạng thái đúng khi bạn nói, khi bot suy nghĩ, khi bot nói, khi ngắt lời bot.
 - [x] Phụ đề bot bật / tắt được; bảng hội thoại mở / đóng bằng nút và vuốt.
-- [ ] Có âm báo và rung khi bắt đầu, kết thúc, bật / tắt mic.
+- [x] Có rung khi bắt đầu, kết thúc, bật / tắt mic. (Âm báo bỏ: xem 2.6.)
 - [ ] Mặc định loa ngoài, không vọng tiếng; AirPods / tai nghe tự chuyển.
-- [ ] Màn hình không tắt trong lúc gọi.
+- [x] Màn hình không tắt trong lúc gọi.
 - [ ] Xuống nền < 30 giây rồi quay lại vẫn nói tiếp được (hoặc đã ghi lại nền tảng
       nào không giữ được).
 - [ ] Đổi wifi ↔ 4G giữa chừng: tự kết nối lại hoặc báo lỗi rõ ràng.
