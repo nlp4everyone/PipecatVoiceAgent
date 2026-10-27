@@ -28,6 +28,7 @@ import { type AppConfig, config, configError } from "@/lib/config";
 import { routeAudioOutput } from "@/lib/audio-route";
 import { type Theme, useTheme } from "@/lib/theme";
 import { useConversation } from "@/hooks/use-conversation";
+import { useCallResilience } from "@/hooks/use-call-resilience";
 import { useCallFeedback } from "@/hooks/use-call-feedback";
 import { useCaptionsSetting } from "@/hooks/use-captions-setting";
 import { useOrbLevel } from "@/hooks/use-orb-level";
@@ -95,8 +96,16 @@ function VoiceScreen({ config }: { config: AppConfig }) {
     useConversation(client);
   const voice = useVoicePhase(client, transportState, micEnabled);
   useCallFeedback(transportState, voice.inCall);
+  const { reconnecting, endCall } = useCallResilience({
+    client,
+    transportState,
+    inCall: voice.inCall,
+    error,
+    connect,
+    disconnect,
+  });
   const orbLevel = useOrbLevel(client, voice.levelSource);
-  const failed = !voice.inCall && (!!error || transportState === "error");
+  const failedRaw = !voice.inCall && (!!error || transportState === "error");
 
   // Orb scales with the screen; the text block hangs below it without moving it.
   const { width } = useWindowDimensions();
@@ -109,13 +118,16 @@ function VoiceScreen({ config }: { config: AppConfig }) {
   const start = () => void connect();
 
   // One line under the orb at most: start hint, or mic-off notice (like web).
-  const hint = failed
-    ? null
-    : !voice.inCall
-      ? "Chạm để bắt đầu trò chuyện"
-      : voice.muted
-        ? "Micro đang tắt"
-        : null;
+  const failed = failedRaw && !reconnecting;
+  const hint = reconnecting
+    ? "Đang kết nối lại…"
+    : failed
+      ? null
+      : !voice.inCall
+        ? "Chạm để bắt đầu trò chuyện"
+        : voice.muted
+          ? "Micro đang tắt"
+          : null;
 
   // Bot captions grow word by word (BotOutput) and show the sentence being
   // spoken; hidden while the user holds the turn (like web).
@@ -208,7 +220,7 @@ function VoiceScreen({ config }: { config: AppConfig }) {
               void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               toggleMic();
             }}
-            onDisconnect={() => void disconnect()}
+            onDisconnect={() => void endCall()}
           />
         )}
       </View>
