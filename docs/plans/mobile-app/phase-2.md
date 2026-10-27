@@ -250,8 +250,10 @@ màn hình cuộc gọi hiện) cùng sự kiện gián đoạn âm thanh / mấ
 
 **Đổi mạng** (wifi ↔ 4G) **hoặc mất mạng ngắn:**
 
-- Transport báo mất kết nối → thử kết nối lại **một lần** (phiên mới) và hiện
-  "Đang kết nối lại…".
+- Transport tự nối lại trước: khi ICE `disconnected` quá 5 giây nó tạo lại peer
+  connection **trong cùng phiên** (trạng thái vẫn `ready`, bot không chào lại).
+  Chỉ khi nó bỏ cuộc và dừng thì app mới vào việc: thử kết nối lại **một lần**
+  (phiên mới) và hiện "Đang kết nối lại…" (`hooks/use-call-resilience.ts`).
 - Không được → kết thúc, hiện lỗi kèm nút thử lại.
 - Không tự thử lại liên tục, tránh tốn pin và tạo nhiều phiên bot.
 
@@ -311,6 +313,12 @@ Các bước đã viết code nhưng chưa thử hết trên máy. Xong mục n�
 - [ ] **2.7** Cắm / rút tai nghe dây và bật / tắt AirPods giữa cuộc gọi: tự chuyển đường
       ra. Code đã viết (`lib/audio-route.ts`, đối chiếu với code native của Daily) nhưng
       **chưa thử trên máy** vì chưa có tai nghe.
+- [ ] **2.8** Bật / tắt chế độ máy bay giữa cuộc gọi (iPhone, bản Release): không hiện
+      "Chạm để bắt đầu", không có chữ báo, bot không chào lại — khớp với việc transport
+      tự nối lại trong cùng phiên. **Chưa xác nhận** bot nghe và trả lời lại sau khi có
+      mạng; chưa thử mất mạng đủ lâu để transport bỏ cuộc (nhánh nối lại một lần).
+- [ ] **2.8** Xuống nền < 30 giây rồi quay lại; xuống nền > 30 giây tự kết thúc; cuộc
+      gọi điện đến. Code đã viết, chưa thử trên máy.
 
 Log tạm `[audio-level]` và `[phase]` đã bỏ khỏi `apps/mobile/src/App.tsx` sau khi
 kiểm xong; đo fps Android thì dùng Performance Monitor, không cần log.
