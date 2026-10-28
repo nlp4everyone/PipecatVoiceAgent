@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Model avatar (giấy phép không cho phân phối lại): không commit, xem docs/plans/avatar-3d/phase-0.md
+public/avatars/*.vrm
