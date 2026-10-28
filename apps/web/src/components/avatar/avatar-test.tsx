@@ -22,7 +22,12 @@ const EMOTION = ["happy", "sad", "angry", "relaxed"] as const;
 const DRIVEN = [...MOUTH, ...EMOTION];
 
 interface Stats {
+  /** fps trong 0.5 giây gần nhất. */
   fps: number;
+  /** Trung bình và thấp nhất (theo cửa sổ 0.5 giây) từ lúc mở trang. */
+  avg: number;
+  min: number;
+  elapsed: number;
   triangles: number;
 }
 
@@ -30,7 +35,7 @@ export function AvatarTest() {
   const modelUrl = useMemo(() => new URLSearchParams(location.search).get("model") ?? DEFAULT_MODEL, []);
   const targetRef = useRef<Record<string, number>>({});
   const [active, setActive] = useState<string | null>(null);
-  const [stats, setStats] = useState<Stats>({ fps: 0, triangles: 0 });
+  const [stats, setStats] = useState<Stats>({ fps: 0, avg: 0, min: 0, elapsed: 0, triangles: 0 });
   const [available, setAvailable] = useState<string[]>([]);
 
   const pick = (name: string | null) => {
@@ -46,9 +51,17 @@ export function AvatarTest() {
         <Avatar url={modelUrl} targetRef={targetRef} onExpressions={setAvailable} />
         <StatsProbe onStats={setStats} />
       </Canvas>
+      {!available.length && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
+          Đang tải model…
+        </div>
+      )}
 
       <div className="pointer-events-none absolute left-3 top-3 rounded-md bg-background/80 px-3 py-2 font-mono text-xs">
         <div>{stats.fps} fps</div>
+        <div className="text-muted-foreground">
+          tb {stats.avg} · thấp nhất {stats.min} · {formatElapsed(stats.elapsed)}
+        </div>
         <div>{(stats.triangles / 1000).toFixed(1)}k tam giác / khung</div>
         <div className="text-muted-foreground">{modelUrl.split("/").pop()}</div>
       </div>
@@ -216,15 +229,29 @@ function Avatar({ url, targetRef, onExpressions }: AvatarProps) {
   return <primitive object={vrm.scene} />;
 }
 
-/** Đếm fps và số tam giác mỗi khung, báo lại mỗi 0.5 giây. */
+function formatElapsed(sec: number) {
+  return `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
+}
+
+/** Đếm fps và số tam giác mỗi khung, báo lại mỗi 0.5 giây. Bỏ 2 giây đầu (nạp model) khi tính thấp nhất. */
 function StatsProbe({ onStats }: { onStats: (s: Stats) => void }) {
-  const acc = useRef({ frames: 0, time: 0 });
+  const acc = useRef({ frames: 0, time: 0, totalFrames: 0, totalTime: 0, min: Infinity });
   useFrame(({ gl }, dt) => {
     const a = acc.current;
     a.frames += 1;
     a.time += dt;
+    a.totalFrames += 1;
+    a.totalTime += dt;
     if (a.time >= 0.5) {
-      onStats({ fps: Math.round(a.frames / a.time), triangles: gl.info.render.triangles });
+      const fps = a.frames / a.time;
+      if (a.totalTime > 2) a.min = Math.min(a.min, fps);
+      onStats({
+        fps: Math.round(fps),
+        avg: Math.round(a.totalFrames / a.totalTime),
+        min: Number.isFinite(a.min) ? Math.round(a.min) : 0,
+        elapsed: a.totalTime,
+        triangles: gl.info.render.triangles,
+      });
       a.frames = 0;
       a.time = 0;
     }

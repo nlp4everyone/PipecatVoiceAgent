@@ -120,3 +120,36 @@ Font giao diện hiện tại là **Geist Variable** (`@fontsource-variable/geis
 
 Kết luận: không phải đổi font. Avatar không có chữ trong canvas nên không bị
 ảnh hưởng; phụ đề và giao diện bên ngoài dùng Geist như hiện nay.
+
+### 0.6 Đo trên thiết bị thật
+
+Cách đo: bản production (`npm run build` rồi `vite preview --host`) qua Tailscale,
+mở `/?avatar-test&model=/avatars/chibi03.vrm` trên Safari. Bản dev không dùng để
+đo vì chậm hơn và cho fps thấp hơn. Trang thử hiện fps, trung bình, thấp nhất và
+đồng hồ chạy ở góc trái. Avatar chạy một mình: chưa có WebRTC, audio hay lip-sync.
+
+| Model | Máy | Thời gian | fps | tb | thấp nhất | Nhiệt | Pin |
+|---|---|---|---|---|---|---|---|
+| chibi03 (13.7k tam giác, 27.3k mỗi khung vì outline) | iPhone | ~5 phút | 60 | 60 | 58 | Hơi ấm | Chưa thấy tụt |
+
+- Đạt ngân sách 30 fps trong README với dư lớn. 60 là mức trần của Safari (kể cả
+  màn hình ProMotion), nên chưa biết còn dư bao nhiêu sức.
+- Chưa đo: đủ 10 phút, mức pin chính xác (%), Mocking Spit, máy khác hoặc máy
+  yếu, và khi gọi bot thật (có WebRTC, audio, lip-sync). Số này là mức tối thiểu.
+- Số fps đo trên server Ubuntu (render phần mềm, 13–28 fps) không có giá trị.
+- Lần đầu tải qua 5G và relay Tailscale mất lâu: trang đen một lúc trước khi hiện.
+  Đã thêm chữ "Đang tải…" và khung báo lỗi trên màn hình để tránh nhầm với lỗi.
+- Trang gốc `/` (app bot) không chạy qua HTTP thường vì cần HTTPS cho micro và
+  WebRTC; chỉ trang thử mở được qua link HTTP.
+
+## Xong phase 0
+
+- [x] Branch có `apps/web`.
+- [x] Biết điểm chọn quả cầu / avatar: `voice-screen.tsx` (0.2).
+- [x] Đã chọn model, ghi giấy phép và nguồn (0.3): Mocking Spit, **nhưng** nó là
+      quái vật một mắt, miệng quá to nên lip-sync khó thấy. Chibi03 hợp hơn về
+      hình, biểu cảm và lip-sync nhưng có giấy phép `Redistribution_Prohibited`.
+      **Chưa chốt model dùng cho phase 1.**
+- [x] Trang thử avatar chạy: thở, chớp mắt, nhìn theo con trỏ (0.4).
+- [x] Font tiếng Việt đủ (0.5).
+- [x] Có số liệu fps đầu tiên trên iPhone (0.6), còn thiếu pin chính xác và 10 phút.
