@@ -101,3 +101,22 @@ chọn model, đã biết điểm chọn trong `voice-screen`.
 - Đã loại: chibi01–03 (Xmas Chibis, `Redistribution_Prohibited`, không có xương
   ngón tay), Rose (CC0 nhưng không có biểu cảm), CuteMoth (CC0 nhưng thiếu
   `look*`, 12 ngón).
+
+### 0.5 Font tiếng Việt
+
+Font giao diện hiện tại là **Geist Variable** (`@fontsource-variable/geist`, nhập ở
+`index.css`). Đã kiểm tra:
+
+- Gói font có sẵn bản con `vietnamese` (`geist-vietnamese-wght-normal.woff2`).
+- Đọc bảng ký tự (cmap) của ba bản con latin, latin-ext, vietnamese: đủ cả 146
+  chữ tiếng Việt (12 nguyên âm có dấu với đủ 5 dấu thanh, hoa và thường, cùng
+  `đ/Đ`). Không thiếu ký tự nào.
+- Dấu chồng (ệ, ữ, ể, ỡ, ằ…) hiển thị đúng ở độ đậm 300 và 700 trong Chrome;
+  trình duyệt nạp đúng các bản con latin, latin-ext, vietnamese, không rơi về
+  font hệ thống cho chữ Việt.
+- Ngoại lệ nhỏ: `₫` (ký hiệu đồng) **không có** trong font, trình duyệt dùng font
+  hệ thống thay thế nên nét hơi khác. Dùng chữ `đ` thay cho `₫`, hoặc chấp nhận.
+- Chưa kiểm tra: iOS Safari và WebView (phase 5), nơi có thể có khác biệt dấu.
+
+Kết luận: không phải đổi font. Avatar không có chữ trong canvas nên không bị
+ảnh hưởng; phụ đề và giao diện bên ngoài dùng Geist như hiện nay.
