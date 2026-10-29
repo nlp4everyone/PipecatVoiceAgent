@@ -8,12 +8,14 @@ import {
 import {
   CaptionsIcon,
   CaptionsOffIcon,
+  CircleDotIcon,
   MessageSquareTextIcon,
   MicIcon,
   MicOffIcon,
+  UserRoundIcon,
   XIcon,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useRef, useState } from "react";
 
 import { ChatOrb, type OrbState } from "@/components/chat-orb";
 import { unlockBotAudio } from "@/components/pipecat/bot-audio";
@@ -22,6 +24,23 @@ import { TextInput } from "@/components/pipecat/text-input";
 import { TranscriptOverlay } from "@/components/pipecat/transcript-overlay";
 import { playConnectChime, playEndChime, unlockChimes } from "@/lib/chimes";
 import { cn } from "@/lib/utils";
+
+// Nạp lazy để người chỉ dùng quả cầu không phải tải three.js.
+const AvatarStage = lazy(() => import("@/components/avatar/avatar-stage"));
+
+type Visual = "orb" | "avatar";
+const VISUAL_KEY = "voiceagent.visual";
+
+/** Lựa chọn đã lưu, nếu không có thì lấy `VITE_DEFAULT_VISUAL`, cuối cùng là quả cầu. */
+function loadVisual(): Visual {
+  try {
+    const saved = localStorage.getItem(VISUAL_KEY);
+    if (saved === "orb" || saved === "avatar") return saved;
+  } catch {
+    // localStorage bị chặn: dùng mặc định
+  }
+  return import.meta.env.VITE_DEFAULT_VISUAL === "avatar" ? "avatar" : "orb";
+}
 
 /** Pha hội thoại, suy ra từ các event RTVI. Quyết định quả cầu phản ứng theo ai. */
 type Phase = "listening" | "userSpeaking" | "thinking" | "botSpeaking";
@@ -57,6 +76,9 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
   const [phase, setPhase] = useState<Phase>("listening");
   const [captionsOn, setCaptionsOn] = useState(true);
   const [chatOpen, setChatOpen] = useState(false);
+  const [visual, setVisual] = useState<Visual>(loadVisual);
+  const [avatarReady, setAvatarReady] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const wasReadyRef = useRef(false);
 
   const isReady = transportState === "ready";
@@ -110,6 +132,23 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
   // Dòng chữ duy nhất dưới quả cầu: gợi ý trước khi gọi, hoặc báo mic đang tắt.
   const hint = !inCall ? "Chạm để bắt đầu trò chuyện" : isReady && !isMicEnabled ? "Micro đang tắt" : null;
 
+  const showAvatar = visual === "avatar" && !avatarError;
+
+  // Đổi giữa quả cầu và avatar chỉ đổi phần hiển thị; kết nối với bot giữ nguyên.
+  const toggleVisual = () => {
+    const next: Visual = showAvatar ? "orb" : "avatar";
+    setVisual(next);
+    setAvatarReady(false);
+    setAvatarError(false);
+    try {
+      localStorage.setItem(VISUAL_KEY, next);
+    } catch {
+      // không lưu được thì lần sau dùng mặc định
+    }
+  };
+  const handleAvatarError = useCallback(() => setAvatarError(true), []);
+  const handleAvatarReady = useCallback(() => setAvatarReady(true), []);
+
   const handleStart = () => {
     // Phải gọi trong lúc người dùng bấm, nếu không iOS Safari chặn tiếng.
     unlockBotAudio();
@@ -121,6 +160,13 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
     <div className="flex h-dvh overflow-hidden bg-background text-foreground">
       <main className="relative flex min-w-0 flex-1 flex-col items-center">
         <header className="flex h-16 w-full items-center justify-end gap-1 px-3 sm:px-5">
+          <IconButton
+            label={showAvatar ? "Dùng quả cầu" : "Dùng avatar"}
+            onClick={toggleVisual}
+            variant="ghost"
+          >
+            {showAvatar ? <CircleDotIcon /> : <UserRoundIcon />}
+          </IconButton>
           {inCall && (
             <>
               <IconButton
@@ -154,7 +200,27 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
               isReady && !isMicEnabled && "opacity-70",
             )}
           >
-            <ChatOrb track={orbTrack} state={orbState} muted={isReady && !isMicEnabled} size={240} />
+            {showAvatar ? (
+              <div className="relative h-80 w-64 sm:h-96 sm:w-72">
+                {/* Quả cầu giữ chỗ cho tới khi model nạp xong. */}
+                {!avatarReady && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <ChatOrb track={null} state="connecting" size={160} />
+                  </div>
+                )}
+                <Suspense fallback={null}>
+                  <AvatarStage
+                    state={orbState}
+                    muted={isReady && !isMicEnabled}
+                    onReady={handleAvatarReady}
+                    onError={handleAvatarError}
+                    className={cn("transition-opacity duration-500", avatarReady ? "opacity-100" : "opacity-0")}
+                  />
+                </Suspense>
+              </div>
+            ) : (
+              <ChatOrb track={orbTrack} state={orbState} muted={isReady && !isMicEnabled} size={240} />
+            )}
           </button>
 
           <p className="sr-only" aria-live="polite">
@@ -166,6 +232,11 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
             {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
             {captionsOn && isReady && phase !== "userSpeaking" && phase !== "thinking" && (
               <TranscriptOverlay size="lg" />
+            )}
+            {visual === "avatar" && avatarError && (
+              <p className="max-w-md text-center text-sm text-muted-foreground" role="status">
+                Không tải được avatar, đang dùng quả cầu.
+              </p>
             )}
             {error && (
               <p className="max-w-md text-center text-sm text-destructive" role="alert">
