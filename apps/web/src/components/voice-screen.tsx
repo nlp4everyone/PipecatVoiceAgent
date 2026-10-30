@@ -202,7 +202,7 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
             )}
           >
             {showAvatar ? (
-              <div className="relative h-80 w-64 sm:h-96 sm:w-72">
+              <div className="relative h-96 w-72 [mask-image:linear-gradient(to_bottom,black_82%,transparent)] sm:h-[28rem] sm:w-80">
                 {/* Quả cầu giữ chỗ cho tới khi model nạp xong. */}
                 {!avatarReady && (
                   <div className="absolute inset-0 flex items-center justify-center">
