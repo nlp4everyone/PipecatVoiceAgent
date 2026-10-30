@@ -13,19 +13,22 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { OrbState } from "@/components/chat-orb";
 import { cn } from "@/lib/utils";
 
+import { useAvatarLipsync, VISEMES } from "./use-avatar-lipsync";
 import { useAvatarPose } from "./use-avatar-state";
 
 /** Model mặc định; đổi bằng biến môi trường `VITE_AVATAR_URL`. File .vrm không nằm trong repo. */
 const AVATAR_URL = (import.meta.env.VITE_AVATAR_URL as string | undefined) || "/avatars/Mocking_Spit_Strawberry.vrm";
 // Góc hạ tay khỏi tư thế chữ T (độ).
 const ARM_RAD = MathUtils.degToRad(58);
-// Mọi expression do avatar-stage tự điều khiển (miệng sẽ thêm ở phase 2).
+// Expression cảm xúc do avatar-stage tự điều khiển; miệng do `useAvatarLipsync`.
 const EMOTIONS = ["happy", "relaxed", "sad"] as const;
 
 interface AvatarStageProps {
   state: OrbState;
   /** Mic tắt: avatar chậm lại, mặt trung tính. */
   muted?: boolean;
+  /** Track âm thanh của bot, để miệng mấp máy theo giọng. */
+  botTrack?: MediaStreamTrack | null;
   /** Nạp model lỗi (thiếu file, mạng): để màn hình quay về quả cầu. */
   onError?: (error: unknown) => void;
   /** Model đã hiện lần đầu. */
@@ -33,7 +36,7 @@ interface AvatarStageProps {
   className?: string;
 }
 
-export default function AvatarStage({ state, muted = false, onError, onReady, className }: AvatarStageProps) {
+export default function AvatarStage({ state, muted = false, botTrack, onError, onReady, className }: AvatarStageProps) {
   const poseRef = useAvatarPose(state, muted);
   return (
     <div className={cn("relative size-full", className)} aria-hidden="true">
@@ -41,7 +44,7 @@ export default function AvatarStage({ state, muted = false, onError, onReady, cl
         <Canvas dpr={[1, 2]} camera={{ fov: 30, position: [0, 1.2, 2.5] }} resize={{ scroll: false }}>
           <ambientLight intensity={1.1} />
           <directionalLight position={[1, 2, 3]} intensity={1.6} />
-          <Avatar url={AVATAR_URL} poseRef={poseRef} onReady={onReady} />
+          <Avatar url={AVATAR_URL} poseRef={poseRef} botTrack={botTrack} onReady={onReady} />
         </Canvas>
       </LoadBoundary>
     </div>
@@ -65,11 +68,13 @@ class LoadBoundary extends Component<{ children: ReactNode; onError?: (e: unknow
 interface AvatarProps {
   url: string;
   poseRef: ReturnType<typeof useAvatarPose>;
+  botTrack?: MediaStreamTrack | null;
   onReady?: () => void;
 }
 
-function Avatar({ url, poseRef, onReady }: AvatarProps) {
+function Avatar({ url, poseRef, botTrack, onReady }: AvatarProps) {
   const { camera } = useThree();
+  const sampleMouth = useAvatarLipsync(botTrack);
   const gltf = useLoader(GLTFLoader, url, (loader) => {
     loader.register((parser) => new VRMLoaderPlugin(parser));
   });
@@ -180,6 +185,8 @@ function Avatar({ url, poseRef, onReady }: AvatarProps) {
         const target = muted ? 0 : (pose.emotion[n] ?? 0);
         em.setValue(n, MathUtils.damp(em.getValue(n) ?? 0, target, 6, dt));
       }
+      const mouth = sampleMouth(dt);
+      for (const v of VISEMES) em.setValue(v, mouth[v]);
     }
     vrm.update(dt);
   });

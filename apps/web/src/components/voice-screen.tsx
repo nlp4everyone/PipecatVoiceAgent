@@ -214,6 +214,7 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
                     <AvatarStage
                       state={orbState}
                       muted={isReady && !isMicEnabled}
+                      botTrack={botTrack}
                       onReady={handleAvatarReady}
                       onError={handleAvatarError}
                       className={cn("transition-opacity duration-500", avatarReady ? "opacity-100" : "opacity-0")}
