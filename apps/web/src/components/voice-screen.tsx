@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { lazy, Suspense, useCallback, useRef, useState } from "react";
 
+import { AvatarErrorBoundary } from "@/components/avatar/avatar-error-boundary";
 import { ChatOrb, type OrbState } from "@/components/chat-orb";
 import { unlockBotAudio } from "@/components/pipecat/bot-audio";
 import { Conversation } from "@/components/pipecat/conversation";
@@ -208,15 +209,17 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
                     <ChatOrb track={null} state="connecting" size={160} />
                   </div>
                 )}
-                <Suspense fallback={null}>
-                  <AvatarStage
-                    state={orbState}
-                    muted={isReady && !isMicEnabled}
-                    onReady={handleAvatarReady}
-                    onError={handleAvatarError}
-                    className={cn("transition-opacity duration-500", avatarReady ? "opacity-100" : "opacity-0")}
-                  />
-                </Suspense>
+                <AvatarErrorBoundary onError={handleAvatarError}>
+                  <Suspense fallback={null}>
+                    <AvatarStage
+                      state={orbState}
+                      muted={isReady && !isMicEnabled}
+                      onReady={handleAvatarReady}
+                      onError={handleAvatarError}
+                      className={cn("transition-opacity duration-500", avatarReady ? "opacity-100" : "opacity-0")}
+                    />
+                  </Suspense>
+                </AvatarErrorBoundary>
               </div>
             ) : (
               <ChatOrb track={orbTrack} state={orbState} muted={isReady && !isMicEnabled} size={240} />
