@@ -83,11 +83,13 @@ hiện dòng báo.
   có lỗi console. Dev server không dùng được trong headless vì phục vụ hàng
   trăm module three.js riêng lẻ nên quá chậm.
 - iPhone qua `tailscale serve` (HTTPS, chỉ trong tailnet): avatar hiện.
+- Gọi bot thật trên máy tính (dev server) và trên iPhone: cả hai đều ổn.
+- Lỗi đã gặp trên iPhone qua dev server: chunk avatar (`React.lazy`) tải hỏng
+  làm cả cây giao diện bị gỡ, màn hình đen và cuộc gọi chết theo. Đã thêm
+  `AvatarErrorBoundary` để rơi về quả cầu (`dd2d617`).
 
 ### Chưa kiểm tra
 
-- Chưa gọi bot thật nên chưa thấy `connecting / listening / thinking / speaking`.
-- Chưa thử chuyển quả cầu / avatar giữa lúc đang gọi.
 - Chưa đo fps khi gọi bot (WebRTC, audio chạy song song với canvas).
 - Chưa chốt model dùng lâu dài (xem phase 0.3); Mocking Spit luôn há miệng rộng
   nên lip-sync ở phase 2 sẽ khó thấy.
@@ -96,8 +98,8 @@ hiện dòng báo.
 ## Xong phase 1
 
 - [x] 1.1 `avatar-stage` hiển thị trong khung `voice-screen`.
-- [x] 1.2 Mỗi trạng thái có tư thế riêng (chưa thử với bot thật).
-- [x] 1.3 Chuyển quả cầu / avatar bằng nút, không kết nối lại (chưa thử giữa cuộc gọi).
+- [x] 1.2 Mỗi trạng thái có tư thế riêng (đã thử với bot thật).
+- [x] 1.3 Chuyển quả cầu / avatar bằng nút, không kết nối lại.
 - [x] 1.4 Nạp lazy, three.js không vào bundle chính.
-- [x] 1.5 Quả cầu vẫn chạy (đã xem ảnh; chưa thử gọi bot).
-- [ ] Gọi bot thật, avatar đổi tư thế theo trạng thái.
+- [x] 1.5 Quả cầu vẫn chạy (đã gọi bot thật).
+- [x] Gọi bot thật, avatar đổi tư thế theo trạng thái.
