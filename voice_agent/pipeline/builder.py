@@ -15,6 +15,7 @@ from pipecat.processors.aggregators.llm_response_universal import (
 from pipecat.services.llm_service import LLMService
 from pipecat.transports.base_transport import BaseTransport
 
+from voice_agent.pipeline.processors.expression_tags import ExpressionTagProcessor
 from voice_agent.services import Services
 
 
@@ -48,9 +49,11 @@ def build_pipeline(transport: BaseTransport,
                    aggregators: LLMContextAggregatorPair) -> Pipeline:
     """Wire the processors in frame-flow order.
 
-    audio in -> STT -> user aggregator -> LLM -> TTS -> audio out -> assistant
-    aggregator. The assistant aggregator sits *after* transport output so it
-    records only text that was actually spoken (interruptions truncate it).
+    audio in -> STT -> user aggregator -> LLM -> expression tags -> TTS -> audio
+    out -> assistant aggregator. The tag processor strips ``[happy]``-style tags
+    so TTS never reads them. The assistant aggregator sits *after* transport
+    output so it records only text that was actually spoken (interruptions
+    truncate it).
     """
     return Pipeline(
         [
@@ -58,6 +61,7 @@ def build_pipeline(transport: BaseTransport,
             svc.stt,
             aggregators.user(),
             llm,
+            ExpressionTagProcessor(),
             svc.tts,
             transport.output(),
             aggregators.assistant(),
