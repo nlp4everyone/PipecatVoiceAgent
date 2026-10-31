@@ -7,7 +7,13 @@ import App from './App.tsx'
 const AvatarTest = lazy(() =>
   import('./components/avatar/avatar-test.tsx').then((m) => ({ default: m.AvatarTest })),
 )
-const isAvatarTest = new URLSearchParams(location.search).has('avatar-test')
+// Trang thử biểu cảm (phase 3): mở bằng /?avatar-expression.
+const ExpressionTest = lazy(() =>
+  import('./components/avatar/expression-test.tsx').then((m) => ({ default: m.ExpressionTest })),
+)
+const params = new URLSearchParams(location.search)
+const isAvatarTest = params.has('avatar-test')
+const isExpressionTest = params.has('avatar-expression')
 
 // Trên iPhone không có console: hiện lỗi JS ngay trên màn hình để biết vì sao trang trống.
 function showFatal(message: string) {
@@ -25,9 +31,9 @@ if (isAvatarTest) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isAvatarTest ? (
+    {isAvatarTest || isExpressionTest ? (
       <Suspense fallback={<div className="h-dvh bg-background p-4 text-foreground">Đang tải trang thử…</div>}>
-        <AvatarTest />
+        {isAvatarTest ? <AvatarTest /> : <ExpressionTest />}
       </Suspense>
     ) : (
       <App />

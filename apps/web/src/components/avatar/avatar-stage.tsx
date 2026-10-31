@@ -14,7 +14,7 @@ import type { OrbState } from "@/components/chat-orb";
 import { cn } from "@/lib/utils";
 
 import { useAvatarLipsync, VISEMES } from "./use-avatar-lipsync";
-import { useAvatarPose } from "./use-avatar-state";
+import { type ExpressionTag, useAvatarPose } from "./use-avatar-state";
 
 /** Model mặc định; đổi bằng biến môi trường `VITE_AVATAR_URL`. File .vrm không nằm trong repo. */
 const AVATAR_URL = (import.meta.env.VITE_AVATAR_URL as string | undefined) || "/avatars/Mocking_Spit_Strawberry.vrm";
@@ -24,12 +24,14 @@ const ARM_ROOM = 4;
 // Góc hạ tay khỏi tư thế chữ T (độ).
 const ARM_RAD = MathUtils.degToRad(58);
 // Expression cảm xúc do avatar-stage tự điều khiển; miệng do `useAvatarLipsync`.
-const EMOTIONS = ["happy", "relaxed", "sad"] as const;
+const EMOTIONS = ["happy", "relaxed", "sad", "surprised"] as const;
 
 interface AvatarStageProps {
   state: OrbState;
   /** Mic tắt: avatar chậm lại, mặt trung tính. */
   muted?: boolean;
+  /** Biểu cảm bot vừa gửi; chỉ có hiệu lực khi bot đang nói. */
+  expression?: ExpressionTag | null;
   /** Track âm thanh của bot, để miệng mấp máy theo giọng. */
   botTrack?: MediaStreamTrack | null;
   /** Nạp model lỗi (thiếu file, mạng): để màn hình quay về quả cầu. */
@@ -39,8 +41,16 @@ interface AvatarStageProps {
   className?: string;
 }
 
-export default function AvatarStage({ state, muted = false, botTrack, onError, onReady, className }: AvatarStageProps) {
-  const poseRef = useAvatarPose(state, muted);
+export default function AvatarStage({
+  state,
+  muted = false,
+  expression,
+  botTrack,
+  onError,
+  onReady,
+  className,
+}: AvatarStageProps) {
+  const poseRef = useAvatarPose(state, muted, expression);
   return (
     <div className={cn("relative size-full", className)} aria-hidden="true">
       <LoadBoundary onError={onError}>

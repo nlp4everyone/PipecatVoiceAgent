@@ -15,9 +15,10 @@ import {
   UserRoundIcon,
   XIcon,
 } from "lucide-react";
-import { lazy, Suspense, useCallback, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import { AvatarErrorBoundary } from "@/components/avatar/avatar-error-boundary";
+import { type ExpressionTag, isExpressionTag } from "@/components/avatar/use-avatar-state";
 import { ChatOrb, type OrbState } from "@/components/chat-orb";
 import { unlockBotAudio } from "@/components/pipecat/bot-audio";
 import { Conversation } from "@/components/pipecat/conversation";
@@ -80,6 +81,7 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
   const [visual, setVisual] = useState<Visual>(loadVisual);
   const [avatarReady, setAvatarReady] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
+  const [expression, setExpression] = useState<ExpressionTag | null>(null);
   const wasReadyRef = useRef(false);
 
   const isReady = transportState === "ready";
@@ -107,6 +109,14 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
     setPhase((p) => (p === "botSpeaking" ? "listening" : p)),
   );
 
+  // Biểu cảm bot gửi theo từng câu; giữ tới khi có thẻ mới hoặc tới lượt nghe kế tiếp.
+  // Thẻ lạ bị bỏ qua và giữ biểu cảm trước đó.
+  useRTVIClientEvent(RTVIEvent.ServerMessage, (data) => {
+    if (data?.type === "avatar-expression" && isExpressionTag(data.expression)) {
+      setExpression(data.expression);
+    }
+  });
+
   // Quả cầu nhảy theo giọng bot khi bot nói, theo mic khi người dùng nói,
   // còn lại "thở" nhẹ (track = null).
   const orbTrack =
@@ -129,6 +139,11 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
       : !isMicEnabled
         ? "Micro đang tắt"
         : PHASE_LABEL[phase];
+
+  // Hết lượt bot thì quên biểu cảm cũ; thẻ của lượt sau tới khi đang "suy nghĩ", sau mốc này.
+  useEffect(() => {
+    if (orbState === "listening") setExpression(null);
+  }, [orbState]);
 
   // Dòng chữ duy nhất dưới quả cầu: gợi ý trước khi gọi, hoặc báo mic đang tắt.
   const hint = !inCall ? "Chạm để bắt đầu trò chuyện" : isReady && !isMicEnabled ? "Micro đang tắt" : null;
@@ -214,6 +229,7 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
                     <AvatarStage
                       state={orbState}
                       muted={isReady && !isMicEnabled}
+                      expression={expression}
                       botTrack={botTrack}
                       onReady={handleAvatarReady}
                       onError={handleAvatarError}

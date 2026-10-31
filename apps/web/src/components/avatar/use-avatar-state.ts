@@ -19,7 +19,7 @@ export interface AvatarPose {
   /** Nhịp thở: biên độ (rad) và tần số (rad/giây). */
   breath: { amp: number; speed: number };
   /** Giá trị đích của expression cảm xúc (0–1). */
-  emotion: Partial<Record<"happy" | "relaxed" | "sad", number>>;
+  emotion: Partial<Record<"happy" | "relaxed" | "sad" | "surprised", number>>;
 }
 
 const BASE: AvatarPose = {
@@ -48,13 +48,45 @@ export const AVATAR_POSES: Record<OrbState, AvatarPose> = {
   speaking: { ...BASE, sway: 0.03, nod: { amp: 0.025, hz: 0.6 }, emotion: { happy: 0.25 } },
 };
 
+/** Thẻ biểu cảm bot gửi qua RTVI (`avatar-expression`); khớp `EXPRESSION_TAGS` ở backend. */
+export const EXPRESSION_TAGS = ["neutral", "happy", "sad", "surprised", "thinking"] as const;
+export type ExpressionTag = (typeof EXPRESSION_TAGS)[number];
+
+export function isExpressionTag(value: unknown): value is ExpressionTag {
+  return typeof value === "string" && (EXPRESSION_TAGS as readonly string[]).includes(value);
+}
+
+type ExpressionOverride = Partial<Pick<AvatarPose, "tilt" | "pitch" | "gaze" | "emotion">>;
+
+/**
+ * Phần đè lên tư thế lúc bot đang nói. `emotion` thay hẳn cảm xúc nền của tư thế
+ * (nên `neutral` là mặt trung tính). Model mặc định chỉ có joy / sorrow / fun / angry,
+ * không có `surprised`, nên ngạc nhiên thêm ngẩng đầu và một chút vui.
+ * Các giá trị là đoán ban đầu, chỉnh khi thử với bot thật.
+ */
+export const EXPRESSIONS: Record<ExpressionTag, ExpressionOverride> = {
+  neutral: { emotion: {} },
+  happy: { emotion: { happy: 0.8 } },
+  sad: { pitch: 0.1, emotion: { sad: 0.7 } },
+  surprised: { pitch: -0.1, emotion: { surprised: 0.8, happy: 0.25 } },
+  thinking: {
+    tilt: AVATAR_POSES.thinking.tilt,
+    pitch: AVATAR_POSES.thinking.pitch,
+    gaze: AVATAR_POSES.thinking.gaze,
+    emotion: {},
+  },
+};
+
 /**
  * Giữ tư thế đích hiện tại trong ref để vòng lặp vẽ đọc mỗi khung
- * mà không làm canvas render lại khi trạng thái đổi.
+ * mà không làm canvas render lại khi trạng thái đổi. Biểu cảm của bot chỉ có
+ * hiệu lực khi bot đang nói; hết nói thì tư thế quay về của trạng thái.
  */
-export function useAvatarPose(state: OrbState, muted: boolean) {
-  const ref = useRef<{ pose: AvatarPose; muted: boolean }>({ pose: AVATAR_POSES[state], muted });
-  ref.current.pose = AVATAR_POSES[state];
+export function useAvatarPose(state: OrbState, muted: boolean, expression?: ExpressionTag | null) {
+  const target = (): AvatarPose =>
+    state === "speaking" && expression ? { ...AVATAR_POSES[state], ...EXPRESSIONS[expression] } : AVATAR_POSES[state];
+  const ref = useRef<{ pose: AvatarPose; muted: boolean }>({ pose: target(), muted });
+  ref.current.pose = target();
   ref.current.muted = muted;
   return ref;
 }
