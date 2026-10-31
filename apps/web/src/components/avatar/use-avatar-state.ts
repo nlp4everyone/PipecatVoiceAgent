@@ -61,13 +61,14 @@ type ExpressionOverride = Partial<Pick<AvatarPose, "tilt" | "pitch" | "gaze" | "
 /**
  * Phần đè lên tư thế lúc bot đang nói. `emotion` thay hẳn cảm xúc nền của tư thế
  * (nên `neutral` là mặt trung tính). Model mặc định chỉ có joy / sorrow / fun / angry,
- * không có `surprised`, nên ngạc nhiên thêm ngẩng đầu và một chút vui.
+ * không có `surprised`, nên ngạc nhiên thêm ngẩng đầu và một chút vui. Cảm xúc vui và buồn
+ * giữ vừa phải vì chúng đè lên vùng miệng của lipsync (xem `MOUTH_*_OVERLAP` ở avatar-stage).
  * Các giá trị là đoán ban đầu, chỉnh khi thử với bot thật.
  */
 export const EXPRESSIONS: Record<ExpressionTag, ExpressionOverride> = {
   neutral: { emotion: {} },
-  happy: { emotion: { happy: 0.8 } },
-  sad: { pitch: 0.1, emotion: { sad: 0.7 } },
+  happy: { emotion: { happy: 0.5 } },
+  sad: { pitch: 0.1, emotion: { sad: 0.45 } },
   surprised: { pitch: -0.1, emotion: { surprised: 0.8, happy: 0.25 } },
   thinking: {
     tilt: AVATAR_POSES.thinking.tilt,

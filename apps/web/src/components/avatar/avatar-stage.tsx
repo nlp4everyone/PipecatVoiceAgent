@@ -25,6 +25,11 @@ const ARM_ROOM = 4;
 const ARM_RAD = MathUtils.degToRad(58);
 // Expression cảm xúc do avatar-stage tự điều khiển; miệng do `useAvatarLipsync`.
 const EMOTIONS = ["happy", "relaxed", "sad", "surprised"] as const;
+// Morph cảm xúc của model mặc định làm biến dạng gần như cả vùng miệng, cộng dồn với miệng nói
+// (đo trên file .vrm, tính theo đơn vị miệng "a"): joy cùng chiều, thêm ~0.6 mỗi đơn vị;
+// sorrow ngược chiều, bớt ~0.8 mỗi đơn vị. Bù lại bằng cách co giãn độ mở của miệng nói.
+const MOUTH_JOY_OVERLAP = 0.6;
+const MOUTH_SORROW_OVERLAP = 0.8;
 
 interface AvatarStageProps {
   state: OrbState;
@@ -206,7 +211,12 @@ function Avatar({ url, poseRef, botTrack, onReady }: AvatarProps) {
         em.setValue(n, MathUtils.damp(em.getValue(n) ?? 0, target, 6, dt));
       }
       const mouth = sampleMouth(dt);
-      for (const v of VISEMES) em.setValue(v, mouth[v]);
+      const openScale = MathUtils.clamp(
+        1 - MOUTH_JOY_OVERLAP * (em.getValue("happy") ?? 0) + MOUTH_SORROW_OVERLAP * (em.getValue("sad") ?? 0),
+        0.3,
+        1.8,
+      );
+      for (const v of VISEMES) em.setValue(v, MathUtils.clamp(mouth[v] * openScale, 0, 1));
     }
     vrm.update(dt);
   });
