@@ -33,6 +33,7 @@
 
 - Chuyển nhà cung cấp trong lúc đang chạy
 - Giao diện web riêng (RTVI client)
+- Avatar: mấp máy môi sát hơn theo âm vị (cần TTS có mốc âm vị và model có viseme), xem `plans/avatar-3d/phase-2.md`
 - Sửa cấu hình cổng trong docker compose
 
 Danh sách chi tiết kèm link tài liệu Pipecat: `note.txt`.

@@ -76,8 +76,9 @@ Chọn bậc theo khả năng máy, hạ bậc tự động khi fps rớt (chi t
 ## Chưa quyết định
 
 - Bậc 1 dùng sprite dựng từ Blender hay Live2D: chốt ở phase 4.
-- Có dùng ánh xạ viseme theo chữ không: chỉ cân nhắc nếu TTS cho mốc thời gian
-  theo từ và lip-sync theo biên độ chưa đủ đẹp.
+- ~~Có dùng ánh xạ viseme theo chữ không~~: bỏ vì VieNeu không trả mốc thời
+  gian theo từ. Cân nhắc lại nếu đổi sang TTS có mốc, xem "Hướng cải thiện
+  sau" ở [phase-2.md](phase-2.md).
 
 ## Phương án đã cân nhắc và không chọn
 
