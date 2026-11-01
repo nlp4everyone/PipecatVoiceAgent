@@ -5,8 +5,9 @@ import {
   VRMLookAtRangeMap,
   VRMUtils,
 } from "@pixiv/three-vrm";
+import { PerformanceMonitor } from "@react-three/drei";
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
-import { Component, type ReactNode, useEffect, useMemo, useRef } from "react";
+import { Component, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Box3, MathUtils, Object3D, type PerspectiveCamera, SkinnedMesh, Vector3 } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
@@ -14,6 +15,7 @@ import type { OrbState } from "@/components/chat-orb";
 import { cn } from "@/lib/utils";
 
 import { useAvatarLipsync, VISEMES } from "./use-avatar-lipsync";
+import { TIERS, type TierConfig, useTier } from "./quality";
 import { type ExpressionTag, useAvatarPose } from "./use-avatar-state";
 
 /** Model mặc định; đổi bằng biến môi trường `VITE_AVATAR_URL`. File .vrm không nằm trong repo. */
@@ -56,15 +58,35 @@ export default function AvatarStage({
   className,
 }: AvatarStageProps) {
   const poseRef = useAvatarPose(state, muted, expression);
+  const { tier, downgrade } = useTier();
+  const config = TIERS[tier];
+  const showFps = useMemo(() => new URLSearchParams(location.search).has("avatar-fps"), []);
+  const [modelReady, setModelReady] = useState(false);
+  const handleReady = useCallback(() => {
+    setModelReady(true);
+    onReady?.();
+  }, [onReady]);
+  const monitorOn = useMonitorArmed(modelReady && state !== "idle");
   return (
     <div className={cn("relative size-full", className)} aria-hidden="true">
       <LoadBoundary onError={onError}>
-        <Canvas dpr={[1, 2]} camera={{ fov: 30, position: [0, 1.2, 2.5] }} resize={{ scroll: false }}>
+        <Canvas
+          frameloop="demand"
+          dpr={config.dpr}
+          camera={{ fov: 30, position: [0, 1.2, 2.5] }}
+          resize={{ scroll: false }}
+        >
+          {/* fps tụt dưới ngưỡng thì hạ bậc; chỉ hạ, không nâng lại để tránh nhấp nháy giữa hai bậc. */}
+          {monitorOn && (
+            <PerformanceMonitor bounds={() => [config.fps * 0.7, config.fps + 5]} onDecline={downgrade} />
+          )}
+          <FrameDriver fps={config.fps} idleFps={config.idleFps} idle={state === "idle"} showFps={showFps} tier={tier} />
           <ambientLight intensity={1.1} />
           <directionalLight position={[1, 2, 3]} intensity={1.6} />
-          <Avatar url={AVATAR_URL} poseRef={poseRef} botTrack={botTrack} onReady={onReady} />
+          <Avatar url={AVATAR_URL} poseRef={poseRef} botTrack={botTrack} config={config} onReady={handleReady} />
         </Canvas>
       </LoadBoundary>
+      {showFps && <div id="avatar-fps" className="absolute left-2 top-2 font-mono text-xs text-white/80" />}
     </div>
   );
 }
@@ -83,14 +105,95 @@ class LoadBoundary extends Component<{ children: ReactNode; onError?: (e: unknow
   }
 }
 
+/** Thời gian chờ ổn định (ms) trước khi bắt đầu đo fps để hạ bậc. */
+const MONITOR_GRACE_MS = 4000;
+
+/**
+ * Bật đo fps chỉ khi `active` và tab đang hiện, sau thời gian chờ để bỏ qua đoạn nạp model,
+ * biên dịch shader và lúc vừa quay lại tab. Khi chờ ở 15 fps (idle) cũng không đo, tránh hạ bậc oan.
+ */
+function useMonitorArmed(active: boolean) {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    let timer = 0;
+    const sync = () => {
+      window.clearTimeout(timer);
+      setArmed(false);
+      if (active && !document.hidden) timer = window.setTimeout(() => setArmed(true), MONITOR_GRACE_MS);
+    };
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      document.removeEventListener("visibilitychange", sync);
+      window.clearTimeout(timer);
+    };
+  }, [active]);
+  return armed;
+}
+
+/**
+ * Điều khiển nhịp vẽ: canvas ở `frameloop="demand"`, ở đây tự gọi `invalidate` theo fps của bậc.
+ * Dừng hẳn khi tab ẩn. Khi `showFps`, ghi fps đo được vào phần tử `#avatar-fps`.
+ */
+function FrameDriver({
+  fps,
+  idleFps,
+  idle,
+  showFps,
+  tier,
+}: {
+  fps: number;
+  idleFps: number;
+  idle: boolean;
+  showFps: boolean;
+  tier: string;
+}) {
+  const invalidate = useThree((s) => s.invalidate);
+  const target = idle ? idleFps : fps;
+  useEffect(() => {
+    let raf = 0;
+    let next = 0;
+    let frames = 0;
+    let since = performance.now();
+    const interval = 1000 / target;
+    const tick = (now: number) => {
+      raf = requestAnimationFrame(tick);
+      // Lịch cộng dồn theo `interval` (không đo từ khung trước) để fps trung bình đúng; dung sai 4ms
+      // vì rAF chạy theo nhịp màn hình (60/120 Hz, hoặc 30 Hz khi iOS tiết kiệm pin) nên hay lệch nhẹ.
+      if (now < next - 4) return;
+      next = now - next > interval ? now + interval : next + interval;
+      invalidate();
+      frames++;
+      if (showFps && now - since >= 1000) {
+        const el = document.getElementById("avatar-fps");
+        if (el) el.textContent = `${tier} ${Math.round((frames * 1000) / (now - since))}/${target} fps`;
+        frames = 0;
+        since = now;
+      }
+    };
+    const start = () => {
+      cancelAnimationFrame(raf);
+      if (!document.hidden) raf = requestAnimationFrame(tick);
+    };
+    document.addEventListener("visibilitychange", start);
+    start();
+    return () => {
+      document.removeEventListener("visibilitychange", start);
+      cancelAnimationFrame(raf);
+    };
+  }, [target, invalidate, showFps, tier]);
+  return null;
+}
+
 interface AvatarProps {
   url: string;
+  config: TierConfig;
   poseRef: ReturnType<typeof useAvatarPose>;
   botTrack?: MediaStreamTrack | null;
   onReady?: () => void;
 }
 
-function Avatar({ url, poseRef, botTrack, onReady }: AvatarProps) {
+function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
   const { camera } = useThree();
   const sampleMouth = useAvatarLipsync(botTrack);
   const gltf = useLoader(GLTFLoader, url, (loader) => {
@@ -218,7 +321,15 @@ function Avatar({ url, poseRef, botTrack, onReady }: AvatarProps) {
       );
       for (const v of VISEMES) em.setValue(v, MathUtils.clamp(mouth[v] * openScale, 0, 1));
     }
-    vrm.update(dt);
+    if (config.springBones) {
+      vrm.update(dt);
+    } else {
+      // Bậc nhẹ: bỏ spring bones (tốn CPU), chỉ cập nhật phần còn lại của VRM.
+      vrm.humanoid.update();
+      vrm.lookAt?.update(dt);
+      vrm.expressionManager?.update();
+      vrm.materials?.forEach((m) => (m as { update?: (d: number) => void }).update?.(dt));
+    }
   });
 
   return <primitive object={vrm.scene} />;
