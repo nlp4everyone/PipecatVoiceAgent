@@ -19,6 +19,18 @@ export const TIERS: Record<Tier, TierConfig> = {
   light: { fps: 20, idleFps: 10, dpr: [1, 1], springBones: false },
 };
 
+/**
+ * Ép fps để đo: `?fps=60` hoặc `?fps=0` (không giới hạn, vẽ theo nhịp màn hình).
+ * Trả về `null` nếu không có tham số hợp lệ. Dùng để đo sức máy, không dùng thường ngày.
+ */
+export function fpsOverride(): number | null {
+  const raw = new URLSearchParams(location.search).get("fps");
+  if (raw === null) return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return n === 0 ? Number.POSITIVE_INFINITY : n;
+}
+
 const TIER_KEY = "avatar-tier";
 
 /** Chọn bậc ban đầu: ép bằng `?tier=` hoặc localStorage (bậc đã bị hạ trước đó), nếu không thì theo cấu hình máy. */

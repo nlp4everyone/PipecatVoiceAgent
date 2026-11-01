@@ -15,7 +15,7 @@ import type { OrbState } from "@/components/chat-orb";
 import { cn } from "@/lib/utils";
 
 import { useAvatarLipsync, VISEMES } from "./use-avatar-lipsync";
-import { TIERS, type TierConfig, useTier } from "./quality";
+import { fpsOverride, TIERS, type TierConfig, useTier } from "./quality";
 import { type ExpressionTag, useAvatarPose } from "./use-avatar-state";
 
 /** Model mặc định; đổi bằng biến môi trường `VITE_AVATAR_URL`. File .vrm không nằm trong repo. */
@@ -59,14 +59,19 @@ export default function AvatarStage({
 }: AvatarStageProps) {
   const poseRef = useAvatarPose(state, muted, expression);
   const { tier, downgrade } = useTier();
-  const config = TIERS[tier];
+  const override = useMemo(fpsOverride, []);
+  // `?fps=` ép cả fps lúc gọi lẫn lúc chờ để đo sức máy; khi đó tắt tự hạ bậc cho khỏi làm sai số đo.
+  const config = useMemo(
+    () => (override === null ? TIERS[tier] : { ...TIERS[tier], fps: override, idleFps: override }),
+    [tier, override],
+  );
   const showFps = useMemo(() => new URLSearchParams(location.search).has("avatar-fps"), []);
   const [modelReady, setModelReady] = useState(false);
   const handleReady = useCallback(() => {
     setModelReady(true);
     onReady?.();
   }, [onReady]);
-  const monitorOn = useMonitorArmed(modelReady && state !== "idle");
+  const monitorOn = useMonitorArmed(modelReady && state !== "idle" && override === null);
   return (
     <div className={cn("relative size-full", className)} aria-hidden="true">
       <LoadBoundary onError={onError}>
@@ -155,7 +160,7 @@ function FrameDriver({
     let next = 0;
     let frames = 0;
     let since = performance.now();
-    const interval = 1000 / target;
+    const interval = Number.isFinite(target) ? 1000 / target : 0;
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
       // Lịch cộng dồn theo `interval` (không đo từ khung trước) để fps trung bình đúng; dung sai 4ms
@@ -166,7 +171,7 @@ function FrameDriver({
       frames++;
       if (showFps && now - since >= 1000) {
         const el = document.getElementById("avatar-fps");
-        if (el) el.textContent = `${tier} ${Math.round((frames * 1000) / (now - since))}/${target} fps`;
+        if (el) el.textContent = `${tier} ${Math.round((frames * 1000) / (now - since))}/${Number.isFinite(target) ? target : "max"} fps`;
         frames = 0;
         since = now;
       }
