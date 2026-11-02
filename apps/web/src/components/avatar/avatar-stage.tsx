@@ -8,7 +8,7 @@ import {
 import { PerformanceMonitor } from "@react-three/drei";
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import { Component, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Box3, MathUtils, Mesh, Object3D, type PerspectiveCamera, SkinnedMesh, Vector3 } from "three";
+import { MathUtils, Mesh, Object3D, type PerspectiveCamera } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import type { OrbState } from "@/components/chat-orb";
@@ -16,23 +16,16 @@ import { cn } from "@/lib/utils";
 
 import { useAvatarLipsync, VISEMES } from "./use-avatar-lipsync";
 import { fpsOverride, TIERS, type TierConfig, useTier } from "./quality";
-import { type ExpressionTag, useAvatarPose } from "./use-avatar-state";
+import {
+  type ExpressionTag,
+  MOUTH_JOY_OVERLAP,
+  MOUTH_SORROW_OVERLAP,
+  useAvatarPose,
+} from "./use-avatar-state";
+import { ARM_RAD, AVATAR_URL, frameUpperBody, prepareVrm } from "./vrm-frame";
 
-/** Model mặc định; đổi bằng biến môi trường `VITE_AVATAR_URL`. File .vrm không nằm trong repo. */
-const AVATAR_URL = (import.meta.env.VITE_AVATAR_URL as string | undefined) || "/avatars/Mocking_Spit_Strawberry.vrm";
-// Phần chiều cao model hiện trong khung (từ đỉnh đầu xuống), và hệ số bề ngang so với khoảng cách hai vai.
-const UPPER_BODY = 0.62;
-const ARM_ROOM = 4;
-// Góc hạ tay khỏi tư thế chữ T (độ).
-const ARM_RAD = MathUtils.degToRad(58);
 // Expression cảm xúc do avatar-stage tự điều khiển; miệng do `useAvatarLipsync`.
 const EMOTIONS = ["happy", "relaxed", "sad", "surprised"] as const;
-// Morph cảm xúc của model mặc định làm biến dạng gần như cả vùng miệng, cộng dồn với miệng nói
-// (đo trên file .vrm, tính theo đơn vị miệng "a"): joy cùng chiều, thêm ~0.6 mỗi đơn vị;
-// sorrow ngược chiều, bớt ~0.8 mỗi đơn vị. Bù lại bằng cách co giãn độ mở của miệng nói.
-const MOUTH_JOY_OVERLAP = 0.6;
-const MOUTH_SORROW_OVERLAP = 0.8;
-
 interface AvatarStageProps {
   state: OrbState;
   /** Mic tắt: avatar chậm lại, mặt trung tính. */
@@ -210,14 +203,9 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
   const nodPhase = useRef(0);
   const cam = useRef({ y: 0, z: 0 });
 
-  // Chuẩn bị model một lần: bỏ đỉnh thừa, quay VRM 0.x về hướng +z, đặt camera nửa người trên.
+  // Chuẩn bị model một lần rồi đặt camera nửa người trên.
   useEffect(() => {
-    VRMUtils.removeUnnecessaryVertices(gltf.scene);
-    VRMUtils.combineSkeletons(gltf.scene);
-    VRMUtils.rotateVRM0(vrm);
-    vrm.scene.traverse((o) => {
-      o.frustumCulled = false;
-    });
+    prepareVrm(gltf, vrm);
     // Model không có xương mắt thì nhìn bằng expression lookUp/Down/Left/Right (tối đa 30°).
     if (vrm.lookAt && vrm.expressionManager) {
       const range = () => new VRMLookAtRangeMap(30, 1);
@@ -230,37 +218,7 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
       );
       vrm.lookAt.target = lookTarget;
     }
-
-    // Khung nửa người trên: duyệt từng đỉnh sau khi skin vì box bind pose của three lệch nhiều so với hình thật.
-    vrm.scene.updateMatrixWorld(true);
-    const box = new Box3();
-    const v = new Vector3();
-    vrm.scene.traverse((o) => {
-      if (!(o instanceof SkinnedMesh)) return;
-      o.skeleton.update();
-      for (let i = 0; i < o.geometry.attributes.position.count; i++) {
-        o.getVertexPosition(i, v);
-        box.expandByPoint(v.applyMatrix4(o.matrixWorld));
-      }
-    });
-    const height = box.max.y - box.min.y;
-    // Khung nửa người trên: từ đỉnh đầu xuống quanh eo, chừa một chút khoảng trống phía trên đầu.
-    const visible = height * UPPER_BODY;
-    const focusY = box.max.y - visible * 0.5 + height * 0.04;
-    // Bề ngang lấy theo vai chứ không theo hộp bao (lúc đó tay còn dang chữ T, sẽ hạ xuống ngay),
-    // nhân thêm để chừa chỗ cho tay.
-    const lShoulder = vrm.humanoid.getNormalizedBoneNode("leftUpperArm");
-    const rShoulder = vrm.humanoid.getNormalizedBoneNode("rightUpperArm");
-    const shoulderW =
-      lShoulder && rShoulder
-        ? lShoulder.getWorldPosition(v).distanceTo(rShoulder.getWorldPosition(new Vector3()))
-        : (box.max.x - box.min.x) * 0.4;
-    const { fov, aspect } = camera as PerspectiveCamera;
-    const tan = Math.tan(MathUtils.degToRad(fov / 2));
-    const z = Math.max(visible / 2 / tan, (shoulderW * ARM_ROOM) / 2 / (tan * aspect));
-    camera.position.set(0, focusY, z);
-    camera.lookAt(0, focusY, 0);
-    cam.current = { y: focusY, z };
+    cam.current = frameUpperBody(vrm, camera as PerspectiveCamera);
     onReady?.();
     return () => VRMUtils.deepDispose(vrm.scene);
   }, [gltf, vrm, camera, lookTarget, onReady]);

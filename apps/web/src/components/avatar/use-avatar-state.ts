@@ -91,3 +91,10 @@ export function useAvatarPose(state: OrbState, muted: boolean, expression?: Expr
   ref.current.muted = muted;
   return ref;
 }
+
+// Morph cảm xúc của model mặc định làm biến dạng gần như cả vùng miệng, cộng dồn với miệng nói
+// (đo trên file .vrm, tính theo đơn vị miệng "a"): joy cùng chiều, thêm ~0.6 mỗi đơn vị;
+// sorrow ngược chiều, bớt ~0.8 mỗi đơn vị. Bù lại bằng cách co giãn độ mở của miệng nói.
+export const MOUTH_JOY_OVERLAP = 0.6;
+export const MOUTH_SORROW_OVERLAP = 0.8;
+
