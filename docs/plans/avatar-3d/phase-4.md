@@ -82,3 +82,27 @@ tổng ~27k); 95 primitive; 16 material MToon; Hair có ~729k đỉnh cho 11,7k 
 | KTX2 / meshopt | Chưa. File 17,5 MB; Hair ~729k đỉnh |
 
 Chưa đo bậc nhẹ sau khi tắt outline, và chưa đo trên máy yếu.
+
+## Quyết định bậc dự phòng 2D (bước 4.4)
+
+**Chọn: sprite dựng từ Blender.** Không dùng Live2D.
+
+Lý do:
+
+- Bậc này phải chạy được khi WebGL không dùng được (điều kiện xong của 4.5).
+  Live2D bản Web render bằng WebGL, nên hỏng cùng chỗ với bản 3D. Sprite chỉ cần
+  `<img>`/CSS/canvas 2D.
+- Dùng lại `AvatarSample_E.vrm`, cùng nhân vật với bản 3D. Live2D cần một model
+  `.moc3` riêng (vẽ và rigging bằng Cubism Editor), không chuyển được từ VRM.
+- Không ràng buộc giấy phép của Cubism. Chỉ còn phải kiểm tra giấy phép của
+  `AvatarSample_E.vrm` có cho dùng thương mại và render thành ảnh không (việc này
+  áp dụng cho cả bản 3D).
+- Gần như không tốn CPU/GPU, dung lượng chỉ vài chục ảnh nhỏ.
+
+Đánh đổi chấp nhận: chuyển động hạn chế (đổi ảnh). Miệng phải gom về vài mức
+rời rạc (khoảng 3–5 ảnh) thay vì độ mở liên tục; mỗi biểu cảm cần một bộ ảnh
+riêng.
+
+Việc kế tiếp (4.5): dựng thử vài ảnh miệng và biểu cảm để đánh giá bằng mắt xem
+có quá cứng không, rồi làm bậc dự phòng và kiểm tra khi tắt WebGL. Nếu quá cứng
+thì xem lại Live2D như một bậc giữa, không thay cho bậc dự phòng này.
