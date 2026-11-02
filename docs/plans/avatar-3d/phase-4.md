@@ -42,3 +42,43 @@ Mặc định nghiêng về sprite vì nhất quán với bản 3D, trừ khi h�
 
 **Xong khi:** đạt ngân sách trong README trên thiết bị thật, máy yếu tự vào bậc
 nhẹ, và bậc dự phòng hoạt động khi không có WebGL.
+
+## Kết quả đo (bước 4.1)
+
+Đo bằng `?avatar-fps` (hiện fps) và `?fps=` (ép fps, tắt tự hạ bậc). `?fps=0` vẽ
+theo nhịp màn hình.
+
+| Thiết bị | Bậc | Giới hạn mặc định | `?fps=0` (không giới hạn) |
+|---|---|---|---|
+| iPhone 15 Pro Max | full (high) | 30 fps | 60 fps (trần màn hình) |
+| iPhone 15 Pro Max | light | 20 fps | 60 fps (trần màn hình) |
+
+- Cả hai bậc đạt 60 fps, nên mức 30/20 fps là do mình đặt, không phải do máy
+  kéo không nổi. Máy còn dư sức.
+- 60 fps là trần màn hình nên chưa cho biết dư địa thật (xem thêm bằng thời gian
+  mỗi khung hoặc nhiệt/pin).
+- Chưa đo: máy yếu, desktop, pin và nhiệt sau 10 phút gọi.
+
+## Kết quả rà biện pháp (bước 4.2)
+
+Model đang dùng: `AvatarSample_E.vrm` (đặt bằng `VITE_AVATAR_URL` trong
+`apps/web/.env.local`; mặc định của code là `Mocking_Spit_Strawberry.vrm`).
+
+Số liệu model E: 17,5 MB; 3 mesh (Face 3.150 tam giác, Body 11.880, Hair 11.676,
+tổng ~27k); 95 primitive; 16 material MToon; Hair có ~729k đỉnh cho 11,7k tam giác.
+
+| Biện pháp | Trạng thái |
+|---|---|
+| `frameloop="demand"`, hạ fps khi im lặng | Có |
+| Dừng khi tab ẩn | Có |
+| `dpr` 1.5 (nhẹ: 1) | Có |
+| Tắt spring bones ở bậc nhẹ | Có |
+| `PerformanceMonitor` + kiểm tra phần cứng | Có |
+| Không shadow / post-processing | Có |
+| Nút tắt 3D | Có (nút quả cầu/avatar ở `voice-screen.tsx`, từ phase 1) |
+| Tắt outline MToon ở bậc nhẹ | Có (`TierConfig.outline`); 4 material có outline (Face, Body, Onepice, Shoes) |
+| Chỉ render nửa người trên | Chưa. Body là mesh riêng nhưng chứa cả thân; cần cắt hoặc ẩn phần dưới |
+| Bản low-poly (~15k) | Chưa. Model E ~27k tam giác, 95 primitive (nhiều draw call) |
+| KTX2 / meshopt | Chưa. File 17,5 MB; Hair ~729k đỉnh |
+
+Chưa đo bậc nhẹ sau khi tắt outline, và chưa đo trên máy yếu.
