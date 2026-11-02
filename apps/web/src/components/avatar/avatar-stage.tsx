@@ -8,7 +8,7 @@ import {
 import { PerformanceMonitor } from "@react-three/drei";
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import { Component, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Box3, MathUtils, Object3D, type PerspectiveCamera, SkinnedMesh, Vector3 } from "three";
+import { Box3, MathUtils, Mesh, Object3D, type PerspectiveCamera, SkinnedMesh, Vector3 } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import type { OrbState } from "@/components/chat-orb";
@@ -264,6 +264,16 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
     onReady?.();
     return () => VRMUtils.deepDispose(vrm.scene);
   }, [gltf, vrm, camera, lookTarget, onReady]);
+
+  // Bậc nhẹ: ẩn các lượt vẽ outline của MToon (three-vrm tạo một material outline riêng cho mỗi mesh).
+  useEffect(() => {
+    vrm.scene.traverse((o) => {
+      if (!(o instanceof Mesh)) return;
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+        if ((m as { isOutline?: boolean }).isOutline) m.visible = config.outline;
+      }
+    });
+  }, [vrm, config.outline]);
 
   useFrame((frame, dt) => {
     const t = frame.clock.elapsedTime;

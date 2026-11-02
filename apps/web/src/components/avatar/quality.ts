@@ -12,11 +12,13 @@ export interface TierConfig {
   dpr: [number, number];
   /** Có chạy spring bones (tóc, váy) không. */
   springBones: boolean;
+  /** Có vẽ outline MToon không (outline vẽ mesh thêm một lần nữa). */
+  outline: boolean;
 }
 
 export const TIERS: Record<Tier, TierConfig> = {
-  full: { fps: 30, idleFps: 15, dpr: [1, 1.5], springBones: true },
-  light: { fps: 20, idleFps: 10, dpr: [1, 1], springBones: false },
+  full: { fps: 30, idleFps: 15, dpr: [1, 1.5], springBones: true, outline: true },
+  light: { fps: 20, idleFps: 10, dpr: [1, 1], springBones: false, outline: false },
 };
 
 /**
