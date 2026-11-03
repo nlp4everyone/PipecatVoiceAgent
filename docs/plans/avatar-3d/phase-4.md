@@ -85,7 +85,7 @@ Chưa đo bậc nhẹ sau khi tắt outline, và chưa đo trên máy yếu.
 
 ## Quyết định bậc dự phòng 2D (bước 4.4)
 
-**Chọn: sprite dựng từ Blender.** Không dùng Live2D.
+**Chọn: sprite 2D.** Không dùng Live2D. Ảnh được chụp từ chính trang avatar 3D (xem 4.5), không dựng bằng Blender.
 
 Lý do:
 
@@ -106,3 +106,32 @@ riêng.
 Việc kế tiếp (4.5): dựng thử vài ảnh miệng và biểu cảm để đánh giá bằng mắt xem
 có quá cứng không, rồi làm bậc dự phòng và kiểm tra khi tắt WebGL. Nếu quá cứng
 thì xem lại Live2D như một bậc giữa, không thay cho bậc dự phòng này.
+
+## Kết quả bước 4.5 (bậc sprite 2D)
+
+Nguồn ảnh: chụp từ trang 3D thay vì Blender (máy chưa cài Blender). Cách này khớp bản
+3D hơn (cùng shader MToon, cùng khung camera, cùng model) nhưng ảnh kém mịn và kém
+linh hoạt hơn render Blender. Muốn ảnh đẹp hơn thì thay bằng ảnh Blender, giữ nguyên tên
+file và kích thước, không phải sửa code.
+
+| Phần | Nơi |
+|---|---|
+| Danh mục sprite (tên, mức miệng, kích thước) | `components/avatar/sprites.ts` |
+| Trang chụp `/?avatar-sprites` (dựng từng tổ hợp, xuất WebP nền trong suốt) | `components/avatar/sprite-capture.tsx` |
+| Chạy chụp tự động bằng Chrome headless, lưu vào `public/avatars/sprites/` | `tools/capture-sprites.mjs` (cần `npm run dev`) |
+| Khung nửa người trên dùng chung với bản 3D | `components/avatar/vrm-frame.ts` |
+| Component sprite | `components/avatar/sprite-stage.tsx` |
+| Chọn bậc: không có WebGL, hoặc ép bằng `?tier=sprite` | `hasWebGL()`, `shouldUseSprite()` ở `quality.ts`; nối ở `voice-screen.tsx` |
+
+- Bộ ảnh: 5 biểu cảm (`neutral`, `happy`, `sad`, `surprised`, `thinking`) × 3 mức miệng
+  (`closed`, `small`, `wide`) + 1 ảnh chớp mắt = 16 ảnh WebP 480×640, mỗi ảnh ~38 KB
+  (tổng ~600 KB). Chụp lại: `node tools/capture-sprites.mjs`.
+- Mức miệng lấy từ cùng bộ phân tích âm thanh với bản 3D (`useAvatarLipsync`), cộng các
+  viseme lại rồi chia ngưỡng có độ trễ, cập nhật 20 lần/giây.
+- Đã kiểm tra: Chrome headless tắt WebGL hiện sprite (0 canvas, ảnh nạp xong), bật WebGL vẫn
+  dùng avatar 3D; `tsc` và `vite build` qua; ảnh chụp khớp khung và màu bản 3D.
+- **Chưa kiểm tra:** miệng đổi ảnh theo giọng bot thật (mới kiểm tra ảnh tĩnh); các ngưỡng
+  `SMALL_*`/`WIDE_*` là giá trị đoán ban đầu; trên thiết bị thật; độ cứng của chuyển động
+  khi đổi ảnh (điều kiện "quá cứng thì xem lại Live2D" ở 4.4 chưa đánh giá).
+- Chưa làm: tự hạ từ bậc nhẹ xuống sprite khi fps vẫn thấp (hiện sprite chỉ dùng khi không có
+  WebGL hoặc ép bằng `?tier=sprite`); chuyển động nhàn rỗi (thở, nghiêng đầu).

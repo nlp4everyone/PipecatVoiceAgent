@@ -52,7 +52,7 @@ Chọn bậc theo khả năng máy, hạ bậc tự động khi fps rớt (chi t
 |---|---|---|
 | 3 – Đầy đủ | VRM chibi, 30 fps, spring bones, biểu cảm đầy đủ | Máy khoẻ |
 | 2 – Nhẹ | VRM low-poly (~15k tam giác), 20 fps, `dpr` = 1, texture 512, tắt physics | Máy trung bình |
-| 1 – Dự phòng 2D | Sprite dựng từ Blender **hoặc** Live2D (chọn ở phase 4) | Máy rất yếu, WebGL lỗi |
+| 1 – Dự phòng 2D | Sprite 2D chụp từ avatar 3D (đã chọn ở phase 4, thay cho Live2D) | Máy rất yếu, WebGL lỗi |
 | 0 – Quả cầu | `chat-orb` hiện có | Dự phòng cuối cùng |
 
 ## Ngân sách hiệu năng (mục tiêu, chưa đo)
@@ -75,7 +75,7 @@ Chọn bậc theo khả năng máy, hạ bậc tự động khi fps rớt (chi t
 
 ## Chưa quyết định
 
-- Bậc 1 dùng sprite dựng từ Blender hay Live2D: chốt ở phase 4.
+- ~~Bậc 1 dùng sprite hay Live2D~~: chọn sprite, xem [phase-4.md](phase-4.md).
 - ~~Có dùng ánh xạ viseme theo chữ không~~: bỏ vì VieNeu không trả mốc thời
   gian theo từ. Cân nhắc lại nếu đổi sang TTS có mốc, xem "Hướng cải thiện
   sau" ở [phase-2.md](phase-2.md).
