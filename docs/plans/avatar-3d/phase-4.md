@@ -43,6 +43,15 @@ Mặc định nghiêng về sprite vì nhất quán với bản 3D, trừ khi h�
 **Xong khi:** đạt ngân sách trong README trên thiết bị thật, máy yếu tự vào bậc
 nhẹ, và bậc dự phòng hoạt động khi không có WebGL.
 
+**Tình trạng:**
+
+- Đạt ngân sách hiệu năng: tạm coi là xong.
+- Máy yếu tự vào bậc nhẹ: tạm coi là xong.
+- Bậc dự phòng 2D: **để lại.** Đã kiểm tra bằng Chrome headless tắt WebGL, chưa kiểm
+  tra trên thiết bị thật vì chưa có máy test. Cần làm khi có máy: nghe miệng đổi ảnh
+  theo giọng bot thật, chỉnh ngưỡng `SMALL_*`/`WIDE_*`, đánh giá độ cứng (nếu quá cứng
+  thì xem lại Live2D, xem 4.4), thử `?tier=sprite`.
+
 ## Kết quả đo (bước 4.1)
 
 Đo bằng `?avatar-fps` (hiện fps) và `?fps=` (ép fps, tắt tự hạ bậc). `?fps=0` vẽ
@@ -94,9 +103,8 @@ Lý do:
   `<img>`/CSS/canvas 2D.
 - Dùng lại `AvatarSample_E.vrm`, cùng nhân vật với bản 3D. Live2D cần một model
   `.moc3` riêng (vẽ và rigging bằng Cubism Editor), không chuyển được từ VRM.
-- Không ràng buộc giấy phép của Cubism. Chỉ còn phải kiểm tra giấy phép của
-  `AvatarSample_E.vrm` có cho dùng thương mại và render thành ảnh không (việc này
-  áp dụng cho cả bản 3D).
+- Không ràng buộc giấy phép của Cubism. Giấy phép của `AvatarSample_E.vrm` đã
+  kiểm tra, xem "Giấy phép model" bên dưới.
 - Gần như không tốn CPU/GPU, dung lượng chỉ vài chục ảnh nhỏ.
 
 Đánh đổi chấp nhận: chuyển động hạn chế (đổi ảnh). Miệng phải gom về vài mức
@@ -135,3 +143,25 @@ file và kích thước, không phải sửa code.
   khi đổi ảnh (điều kiện "quá cứng thì xem lại Live2D" ở 4.4 chưa đánh giá).
 - Chưa làm: tự hạ từ bậc nhẹ xuống sprite khi fps vẫn thấp (hiện sprite chỉ dùng khi không có
   WebGL hoặc ép bằng `?tier=sprite`); chuyển động nhàn rỗi (thở, nghiêng đầu).
+
+## Giấy phép model
+
+Đọc từ metadata nhúng trong `AvatarSample_E.vrm` (model mẫu "ビビ"/Vivi, tác giả
+VRoidプロジェクト), kiểm tra ngày 2026-11-03.
+
+| Mục | Giá trị |
+|---|---|
+| Ai được dùng | Everyone |
+| Thương mại | Allow (doanh nghiệp `allow`, cá nhân `profit`) |
+| Chỉnh sửa | Allow |
+| Phân phối lại | Allow |
+| Ghi nguồn | Không cần |
+| Bạo lực / tình dục | Allow |
+
+- Dùng thương mại, chỉnh sửa (gồm render thành sprite) và commit sprite lên repo đều
+  được phép. File `.vrm` bị gitignore nên không nằm trong repo.
+- Điều khoản đọc từ tham số của URL giấy phép trong metadata
+  (`hub.vroid.com/license?...`), chưa mở trang đó để đối chiếu. Cần chắc chắn về mặt
+  pháp lý thì nên mở URL kiểm lại.
+- Chưa kiểm tra: `AvatarSample_D`, `chibi03`, `Mocking_Spit_Strawberry` (đây là model
+  mặc định của code khi không đặt `VITE_AVATAR_URL`).

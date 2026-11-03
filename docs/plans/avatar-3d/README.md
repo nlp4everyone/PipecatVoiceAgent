@@ -67,7 +67,7 @@ Chọn bậc theo khả năng máy, hạ bậc tự động khi fps rớt (chi t
 - Hiệu năng thực tế của VRM trong WebView trên máy yếu. Có báo cáo cho rằng
   three.js + VRM nặng và kém ổn định ở trường hợp tương tự; chưa xác minh.
 - Chất lượng miệng với giọng VieNeu và tỉ lệ chibi (đầu to nên dễ lộ lỗi).
-- Giấy phép của từng model được chọn.
+- Giấy phép của từng model được chọn. `AvatarSample_E`: đã kiểm tra, cho phép thương mại, chỉnh sửa, phân phối lại, không cần ghi nguồn (xem [phase-4.md](phase-4.md)). Các model khác: chưa kiểm tra.
 - Chuỗi cung ứng npm: ghim phiên bản, giữ lockfile, kiểm tra trước khi cài.
 - Bundle web phình do three.js; giảm bằng `React.lazy`.
 - Backend có giới hạn số phiên đồng thời không (chưa kiểm tra).
