@@ -33,6 +33,30 @@ export function fpsOverride(): number | null {
   return n === 0 ? Number.POSITIVE_INFINITY : n;
 }
 
+/** Máy có WebGL không (kiểm tra bằng cách tạo thử một context, kết quả nhớ lại). */
+let webglOk: boolean | undefined;
+export function hasWebGL(): boolean {
+  if (webglOk === undefined) {
+    try {
+      const canvas = document.createElement("canvas");
+      webglOk = !!(canvas.getContext("webgl2") ?? canvas.getContext("webgl"));
+    } catch {
+      webglOk = false;
+    }
+  }
+  return webglOk;
+}
+
+/** Dùng bậc sprite 2D khi không có WebGL, hoặc ép bằng `?tier=sprite` để thử. */
+export function shouldUseSprite(): boolean {
+  try {
+    if (new URLSearchParams(location.search).get("tier") === "sprite") return true;
+  } catch {
+    // bỏ qua
+  }
+  return !hasWebGL();
+}
+
 const TIER_KEY = "avatar-tier";
 
 /** Chọn bậc ban đầu: ép bằng `?tier=` hoặc localStorage (bậc đã bị hạ trước đó), nếu không thì theo cấu hình máy. */
