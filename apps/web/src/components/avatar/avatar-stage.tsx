@@ -38,6 +38,8 @@ interface AvatarStageProps {
   onError?: (error: unknown) => void;
   /** Model đã hiện lần đầu. */
   onReady?: () => void;
+  /** Đã ở bậc nhẹ nhất mà fps vẫn tụt: màn hình nên chuyển sang sprite 2D. */
+  onLowFps?: () => void;
   className?: string;
 }
 
@@ -48,6 +50,7 @@ export default function AvatarStage({
   botTrack,
   onError,
   onReady,
+  onLowFps,
   className,
 }: AvatarStageProps) {
   const poseRef = useAvatarPose(state, muted, expression);
@@ -64,6 +67,8 @@ export default function AvatarStage({
     setModelReady(true);
     onReady?.();
   }, [onReady]);
+  // Bậc đầy đủ tụt fps thì hạ xuống nhẹ; bậc nhẹ vẫn tụt thì báo màn hình chuyển sang sprite.
+  const handleDecline = useCallback(() => (tier === "light" ? onLowFps?.() : downgrade()), [tier, onLowFps, downgrade]);
   const monitorOn = useMonitorArmed(modelReady && state !== "idle" && override === null);
   return (
     <div className={cn("relative size-full", className)} aria-hidden="true">
@@ -74,9 +79,9 @@ export default function AvatarStage({
           camera={{ fov: 30, position: [0, 1.2, 2.5] }}
           resize={{ scroll: false }}
         >
-          {/* fps tụt dưới ngưỡng thì hạ bậc; chỉ hạ, không nâng lại để tránh nhấp nháy giữa hai bậc. */}
+          {/* fps tụt dưới ngưỡng thì hạ bậc; chỉ hạ (full → light → sprite), không nâng lại để tránh nhấp nháy giữa hai bậc. */}
           {monitorOn && (
-            <PerformanceMonitor bounds={() => [config.fps * 0.7, config.fps + 5]} onDecline={downgrade} />
+            <PerformanceMonitor bounds={() => [config.fps * 0.7, config.fps + 5]} onDecline={handleDecline} />
           )}
           <FrameDriver fps={config.fps} idleFps={config.idleFps} idle={state === "idle"} showFps={showFps} tier={tier} />
           <ambientLight intensity={1.1} />

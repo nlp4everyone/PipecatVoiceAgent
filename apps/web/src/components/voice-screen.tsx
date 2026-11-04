@@ -18,7 +18,7 @@ import {
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import { AvatarErrorBoundary } from "@/components/avatar/avatar-error-boundary";
-import { shouldUseSprite } from "@/components/avatar/quality";
+import { rememberSprite, shouldUseSprite } from "@/components/avatar/quality";
 import { type ExpressionTag, isExpressionTag } from "@/components/avatar/use-avatar-state";
 import { ChatOrb, type OrbState } from "@/components/chat-orb";
 import { unlockBotAudio } from "@/components/pipecat/bot-audio";
@@ -152,8 +152,12 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
   const hint = !inCall ? "Chạm để bắt đầu trò chuyện" : isReady && !isMicEnabled ? "Micro đang tắt" : null;
 
   const showAvatar = visual === "avatar" && !avatarError;
-  // Không có WebGL thì dùng sprite 2D thay cho avatar 3D (quyết một lần, không đổi giữa cuộc gọi).
-  const [spriteTier] = useState(shouldUseSprite);
+  // Sprite 2D thay avatar 3D khi không có WebGL hoặc bậc nhẹ vẫn tụt fps (chỉ chuyển một chiều, và nhớ lại).
+  const [spriteTier, setSpriteTier] = useState(shouldUseSprite);
+  const handleLowFps = useCallback(() => {
+    rememberSprite();
+    setSpriteTier(true);
+  }, []);
   const Stage = spriteTier ? SpriteStage : AvatarStage;
 
   // Đổi giữa quả cầu và avatar chỉ đổi phần hiển thị; kết nối với bot giữ nguyên.
@@ -239,6 +243,7 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
                       botTrack={botTrack}
                       onReady={handleAvatarReady}
                       onError={handleAvatarError}
+                      onLowFps={handleLowFps}
                       className={cn("transition-opacity duration-500", avatarReady ? "opacity-100" : "opacity-0")}
                     />
                   </Suspense>

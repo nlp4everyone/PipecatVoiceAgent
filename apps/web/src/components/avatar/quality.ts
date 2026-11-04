@@ -47,17 +47,29 @@ export function hasWebGL(): boolean {
   return webglOk;
 }
 
-/** Dùng bậc sprite 2D khi không có WebGL, hoặc ép bằng `?tier=sprite` để thử. */
+const TIER_KEY = "avatar-tier";
+
+/** Dùng bậc sprite 2D khi không có WebGL, bậc nhẹ từng không đạt fps (đã nhớ lại), hoặc ép bằng `?tier=sprite`. */
 export function shouldUseSprite(): boolean {
   try {
-    if (new URLSearchParams(location.search).get("tier") === "sprite") return true;
+    const forced = new URLSearchParams(location.search).get("tier");
+    if (forced === "sprite") return true;
+    // Ép bậc 3D khác (`?tier=full|light`) thì bỏ qua giá trị đã nhớ, để còn đo được.
+    if (forced === null && localStorage.getItem(TIER_KEY) === "sprite") return true;
   } catch {
     // bỏ qua
   }
   return !hasWebGL();
 }
 
-const TIER_KEY = "avatar-tier";
+/** Nhớ là máy này không chạy nổi 3D, lần sau vào thẳng sprite. */
+export function rememberSprite() {
+  try {
+    localStorage.setItem(TIER_KEY, "sprite");
+  } catch {
+    // bỏ qua
+  }
+}
 
 /** Chọn bậc ban đầu: ép bằng `?tier=` hoặc localStorage (bậc đã bị hạ trước đó), nếu không thì theo cấu hình máy. */
 export function pickInitialTier(): Tier {
