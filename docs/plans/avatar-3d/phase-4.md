@@ -28,6 +28,7 @@ fps rớt. Có nút tắt 3D để quay về quả cầu.
 | 4.3 | Chọn bậc tự động và hạ bậc khi fps rớt | Máy yếu tự vào bậc nhẹ |
 | 4.4 | Chọn bậc dự phòng 2D: sprite từ Blender **hoặc** Live2D | Có quyết định, ghi lý do |
 | 4.5 | Làm bậc dự phòng 2D đã chọn | Hoạt động khi WebGL không dùng được |
+| 4.6 | Giảm dung lượng và thời gian tải model | Xem mục "Kế hoạch bước 4.6" bên dưới |
 
 ### 4.4 Chọn giữa sprite và Live2D
 
@@ -114,6 +115,33 @@ riêng.
 Việc kế tiếp (4.5): dựng thử vài ảnh miệng và biểu cảm để đánh giá bằng mắt xem
 có quá cứng không, rồi làm bậc dự phòng và kiểm tra khi tắt WebGL. Nếu quá cứng
 thì xem lại Live2D như một bậc giữa, không thay cho bậc dự phòng này.
+
+## Kế hoạch bước 4.6 (giảm dung lượng và thời gian tải model)
+
+Lý do: lần đầu tải model chậm. `AvatarSample_E.vrm` nặng 17,9 MB, trong đó 14,3 MB (80%) là
+28 ảnh texture PNG, hình học chỉ ~3,6 MB. PNG đã nén sẵn nên gzip gần như không giảm (còn
+~15 MB). Đây là các mục "Chưa" ở bảng 4.2 (KTX2/meshopt, bản low-poly), nay có số liệu để
+chọn thứ tự. Các con số này đọc từ file, **chưa đo thời gian tải thật**.
+
+Làm theo thứ tự, dừng khi đủ nhanh; không cần làm hết.
+
+| # | Việc | Ghi chú |
+|---|---|---|
+| 4.6.0 | Đo: thời gian tải file qua Tailscale từ điện thoại; thời gian từ tải xong đến `onReady` | Bắt buộc làm trước. Nếu thời gian chủ yếu nằm ở giải mã và đưa lên GPU thì ưu tiên giảm kích thước texture |
+| 4.6.1 | Nén texture sang WebP và giảm kích thước (1024 hoặc 512) | Ước tính 17,9 MB còn 3 đến 5 MB. Lưu thành file riêng, **không ghi đè** `AvatarSample_E.vrm` gốc. Cần so mắt màu và MToon |
+| 4.6.2 | Preload: bắt đầu tải model khi vào màn hình, không đợi bật avatar | Không giảm dung lượng nhưng giấu thời gian chờ |
+| 4.6.3 | Phục vụ bản build (`apps/web/dist`) thay cho Vite dev server | Bắt buộc trước khi đo ở phase 5.6 |
+
+Chỉ làm khi 4.6.1 đến 4.6.3 vẫn chưa đạt:
+
+- KTX2 (Basis): nhẹ GPU nhất, nhưng cần thêm `KTX2Loader` và transcoder.
+- meshopt: chỉ giảm phần hình học ~3,6 MB, lợi ích ít.
+- Bản low-poly hoặc model nhỏ hơn cho bậc nhẹ (`chibi03`, `Mocking_Spit_Strawberry` ~5,7 MB): giấy phép chưa kiểm tra.
+
+**Xong khi:** có số dung lượng và thời gian tải trước và sau trên điện thoại qua Tailscale,
+hình nhìn không xấu đi so với bản gốc, và ghi lại kết quả ở mục này.
+
+Giấy phép `AvatarSample_E` đã kiểm tra cho phép chỉnh sửa (xem "Giấy phép model").
 
 ## Kết quả bước 4.3 (chọn bậc tự động)
 
