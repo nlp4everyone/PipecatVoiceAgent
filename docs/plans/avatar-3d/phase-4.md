@@ -30,6 +30,7 @@ fps rớt. Có nút tắt 3D để quay về quả cầu.
 | 4.5 | Làm bậc dự phòng 2D đã chọn | Hoạt động khi WebGL không dùng được |
 | 4.6 | Giảm dung lượng và thời gian tải model | Xem mục "Kế hoạch bước 4.6" bên dưới |
 | 4.7 | Tay tự nhiên hơn: tư thế nghỉ và chuyển động nhẹ theo trạng thái (hướng A, viết bằng code) | Xem mục "Kế hoạch bước 4.7" bên dưới |
+| 4.8 | Chuyển động mượt hơn mà không tăng fps (để máy không nóng thêm) | Xem mục "Kế hoạch bước 4.8" bên dưới |
 
 ### 4.4 Chọn giữa sprite và Live2D
 
@@ -179,6 +180,45 @@ Dùng clip Mixamo (idle, nói chuyện, nghĩ) retarget sang VRM bằng `@pixiv/
 - Có thể kết hợp: giữ hướng A làm tư thế nền và nhịp thở, chỉ dùng clip cho vài cử chỉ.
 - Với bậc sprite, hướng B không giúp được vì sprite chỉ là ảnh tĩnh; cần chụp thêm ảnh cho từng
   cử chỉ.
+
+## Kế hoạch bước 4.8 (mượt hơn mà không tăng fps)
+
+Mục tiêu: chuyển động nhìn mượt hơn mà nhiệt và pin không tăng, vì tăng fps làm máy nóng.
+Cảm giác mượt phụ thuộc cả độ đều của khung và độ êm của chuyển động, không chỉ số fps.
+
+Hiện trạng (đọc từ code, chưa đo):
+
+- Đã có: mọi chuyển động trong `useFrame` tính theo `dt` thực (`damp(..., dt)`, `nodPhase += dt`,
+  `b.t += dt`, `vrm.update(dt)`); `FrameDriver` lập lịch cộng dồn theo `interval` nên fps trung bình đúng.
+- Chưa có: fps chỉ chia hai mức (`idle` và còn lại); bậc sprite không có crossfade (không thấy
+  `transition` trong `sprite-stage.tsx`).
+- Rủi ro (suy luận từ code, **chưa thử**): khi iOS ép rAF xuống 30 Hz (chế độ tiết kiệm pin) mà đích là
+  20 fps, khung có thể rơi vào các mốc cách nhau 66 ms rồi 33 ms thay vì đều 50 ms, gây giật.
+
+| # | Việc | Xong khi |
+|---|---|---|
+| 4.8.0 | Đo nền: nhiệt và pin sau 10 phút ở từng bậc, kèm độ đều của khung (khoảng cách giữa các lần `invalidate`) | Có số liệu để so trước và sau |
+| 4.8.1 | Kiểm tra nhịp khung của `FrameDriver` khi rAF chạy 30 Hz | Biết bậc nhẹ (20 fps) có lệch nhịp không; nếu có thì chọn fps là ước số của tần số quét |
+| 4.8.2 | Fps theo hoạt động: thêm một mức giữa cho "đang nghe, tư thế yên", chuyển mức dần | Nhiệt giảm so với 4.8.0, không khựng khi đổi mức |
+| 4.8.3 | Chuyển động chung bằng CSS: nhịp thở và đung đưa nhẹ của cả khung chạy bằng `transform` | Mượt 60 fps mà không tăng số khung vẽ 3D |
+| 4.8.4 | Crossfade cho bậc sprite: chuyển mềm giữa ảnh miệng và biểu cảm | Bậc sprite hết cảm giác đổi ảnh tức thì |
+| 4.8.5 | So sánh trước và sau: nhiệt, pin, đánh giá bằng mắt | Nhiệt và pin không tăng, chuyển động nhìn đều hơn |
+
+Làm 4.8.0 và 4.8.1 trước (đo và kiểm tra, không đổi code), rồi chọn 4.8.2 đến 4.8.4 theo số đo; việc
+nào số đo cho thấy không cần thì bỏ.
+
+Lưu ý:
+
+- 4.8.3 không làm miệng hay xương mượt hơn, chỉ hợp chuyển động chung của khung; với lip-sync thì
+  30 fps đã đủ mượt.
+- 4.8.2: đổi fps đột ngột có thể thấy khựng nên phải chuyển dần.
+- 4.8.4 nên làm cùng lúc với việc đánh giá độ cứng của sprite đang chờ ở 4.5.
+- Liên quan 4.6 (giảm chi phí mỗi khung) và 4.7 (nhịp thở của tay): nên làm 4.7.2 và 4.8.3 cùng một
+  chỗ để khỏi trùng, và đo nhiệt chung ở 4.6.0 và 4.8.0.
+- Ngoài phạm vi: nội suy mức âm phía mobile đã nằm ở bước 5.3.
+
+**Xong khi:** có số đo nhiệt và pin trước và sau, nhiệt và pin không tăng, và chuyển động nhìn đều
+hơn ở cả bậc 3D lẫn sprite.
 
 ## Kết quả bước 4.3 (chọn bậc tự động)
 
