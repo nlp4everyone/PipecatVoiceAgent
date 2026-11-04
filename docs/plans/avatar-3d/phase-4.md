@@ -29,6 +29,7 @@ fps rớt. Có nút tắt 3D để quay về quả cầu.
 | 4.4 | Chọn bậc dự phòng 2D: sprite từ Blender **hoặc** Live2D | Có quyết định, ghi lý do |
 | 4.5 | Làm bậc dự phòng 2D đã chọn | Hoạt động khi WebGL không dùng được |
 | 4.6 | Giảm dung lượng và thời gian tải model | Xem mục "Kế hoạch bước 4.6" bên dưới |
+| 4.7 | Tay tự nhiên hơn: tư thế nghỉ và chuyển động nhẹ theo trạng thái (hướng A, viết bằng code) | Xem mục "Kế hoạch bước 4.7" bên dưới |
 
 ### 4.4 Chọn giữa sprite và Live2D
 
@@ -142,6 +143,42 @@ Chỉ làm khi 4.6.1 đến 4.6.3 vẫn chưa đạt:
 hình nhìn không xấu đi so với bản gốc, và ghi lại kết quả ở mục này.
 
 Giấy phép `AvatarSample_E` đã kiểm tra cho phép chỉnh sửa (xem "Giấy phép model").
+
+## Kế hoạch bước 4.7 (tay tự nhiên hơn)
+
+Hiện trạng (đọc từ code): tay chỉ được hạ một góc cố định `ARM_RAD` (58°) bằng cách đặt
+`leftUpperArm.rotation.z` và `rightUpperArm.rotation.z` một lần để thoát tư thế chữ T
+(`avatar-stage.tsx:249-252`, `sprite-capture.tsx:70-73`). Không có cẳng tay, khuỷu, bàn tay
+hay vai, và tay không đổi theo trạng thái hay lời nói, nên trông cứng.
+
+**Chọn hướng A (viết bằng code)**, vì nhẹ, không thêm file clip hay phụ thuộc, hợp với bậc nhẹ,
+và cùng nhóm với mục "chuyển động nhàn rỗi" đang chưa làm. Sửa ở web nên mobile (phase 5)
+hưởng luôn qua WebView.
+
+| # | Việc | Ghi chú |
+|---|---|---|
+| 4.7.0 | Kiểm tra model có đủ bone `leftLowerArm`, `rightLowerArm`, `leftHand`, `rightHand`, `leftShoulder`, `rightShoulder` | VRM humanoid chuẩn thì có; chưa kiểm tra trên `AvatarSample_E` |
+| 4.7.1 | Tư thế nghỉ: hạ tay khỏi chữ T bằng cả vai và cánh tay, gập nhẹ khuỷu, bàn tay thả lỏng | Thay cho một góc `ARM_RAD` duy nhất. Giá trị chỉnh bằng mắt |
+| 4.7.2 | Nhịp thở: vai nhún nhẹ, tay đung đưa rất nhỏ theo nhịp | Dùng chung bộ định thời với chuyển động nhàn rỗi |
+| 4.7.3 | Theo trạng thái: nói thì tay cử động nhẹ theo mức miệng, nghĩ thì nâng tay hơi gập, nghe thì tay yên | Trạng thái lấy từ `use-avatar-state.ts`, chuyển mượt bằng `damp` sẵn có |
+| 4.7.4 | Cập nhật khung camera và chụp lại sprite | Tư thế tay đổi thì `vrm-frame.ts` (bề ngang vai và tay) phải kiểm tra lại, và 16 ảnh sprite phải chụp lại bằng `node tools/capture-sprites.mjs` để khớp bản 3D |
+
+**Xong khi:** bản 3D có tư thế nghỉ tự nhiên và tay chuyển động nhẹ theo trạng thái mà không
+tốn rõ rệt fps ở bậc nhẹ; khung camera không cắt tay; sprite khớp tư thế mới.
+
+### Hướng B (để phát triển sau, chưa làm)
+
+Dùng clip Mixamo (idle, nói chuyện, nghĩ) retarget sang VRM bằng `@pixiv/three-vrm-animation`,
+đúng hướng "Mixamo + idle viết bằng code" ở README.
+
+- Ưu: tự nhiên nhất; làm được cử chỉ như tay chạm cằm ở trạng thái `thinking` (phase 1 đã gợi ý).
+- Nhược: thêm file clip và công retarget; nặng hơn cho máy yếu và cho bậc nhẹ; thêm phụ thuộc
+  (ghim phiên bản theo quy tắc chuỗi cung ứng); cần kiểm tra giấy phép của từng clip Mixamo.
+- Khi nào nên chuyển sang: nếu sau 4.7 tay vẫn bị đánh giá là cứng, hoặc muốn cử chỉ phong phú
+  (vẫy tay, chỉ tay, chạm cằm).
+- Có thể kết hợp: giữ hướng A làm tư thế nền và nhịp thở, chỉ dùng clip cho vài cử chỉ.
+- Với bậc sprite, hướng B không giúp được vì sprite chỉ là ảnh tĩnh; cần chụp thêm ảnh cho từng
+  cử chỉ.
 
 ## Kết quả bước 4.3 (chọn bậc tự động)
 
