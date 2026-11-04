@@ -115,6 +115,20 @@ Việc kế tiếp (4.5): dựng thử vài ảnh miệng và biểu cảm để
 có quá cứng không, rồi làm bậc dự phòng và kiểm tra khi tắt WebGL. Nếu quá cứng
 thì xem lại Live2D như một bậc giữa, không thay cho bậc dự phòng này.
 
+## Kết quả bước 4.3 (chọn bậc tự động)
+
+Code ở `components/avatar/quality.ts` và `avatar-stage.tsx`.
+
+- Bậc ban đầu: `?tier=` > giá trị nhớ trong `localStorage` (`avatar-tier`) > đoán theo máy
+  (`hardwareConcurrency <= 4` hoặc `deviceMemory <= 4` thì vào bậc nhẹ).
+- Hạ bậc: `PerformanceMonitor` (ngưỡng `fps*0.7`), chờ 4 s sau khi model nạp, không đo lúc `idle`,
+  tab ẩn hoặc có `?fps=`. Đường hạ một chiều: đầy đủ → nhẹ → sprite 2D, mỗi bước đều nhớ lại.
+  Bậc nhẹ vẫn tụt thì `AvatarStage` gọi `onLowFps`, `voice-screen.tsx` chuyển sang `SpriteStage`.
+- Đã kiểm tra: `tsc` và `vite build` qua.
+- **Chưa kiểm tra:** chưa thử thật việc tụt fps rồi tự hạ (cả hai bước) trên máy yếu; ngưỡng đoán theo
+  máy hơi chặt (`deviceMemory` bị Chrome giới hạn tối đa 8, nhiều máy mạnh báo 4) nên bậc đầy đủ có
+  thể ít được dùng. Muốn thử lại bước hạ: xoá khoá `avatar-tier` trong `localStorage`.
+
 ## Kết quả bước 4.5 (bậc sprite 2D)
 
 Nguồn ảnh: chụp từ trang 3D thay vì Blender (máy chưa cài Blender). Cách này khớp bản
@@ -141,8 +155,7 @@ file và kích thước, không phải sửa code.
 - **Chưa kiểm tra:** miệng đổi ảnh theo giọng bot thật (mới kiểm tra ảnh tĩnh); các ngưỡng
   `SMALL_*`/`WIDE_*` là giá trị đoán ban đầu; trên thiết bị thật; độ cứng của chuyển động
   khi đổi ảnh (điều kiện "quá cứng thì xem lại Live2D" ở 4.4 chưa đánh giá).
-- Chưa làm: tự hạ từ bậc nhẹ xuống sprite khi fps vẫn thấp (hiện sprite chỉ dùng khi không có
-  WebGL hoặc ép bằng `?tier=sprite`); chuyển động nhàn rỗi (thở, nghiêng đầu).
+- Đã nối: tự hạ từ bậc nhẹ xuống sprite khi fps vẫn thấp (xem 4.3). Chưa làm: chuyển động nhàn rỗi (thở, nghiêng đầu).
 
 ## Giấy phép model
 
