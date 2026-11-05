@@ -172,7 +172,7 @@ Rủi ro cần kiểm:
 
 Đo trên iPhone, mạng **5G**, qua Tailscale tới Vite dev server (không phải bản build), bằng trang
 `/?avatar-test` (trang chính `/` trắng khi vào bằng IP vì không phải secure context, xem dưới).
-Mới đo **một lần**, chưa ghi `direct` hay `relay`.
+Mới đo **hai lần**. Đường Tailscale kiểm tra sau khi đo: **relay** (DERP `sin`, độ trễ 83 đến 194 ms, chưa có kết nối trực tiếp), nên tốc độ mạng chậm và dao động; kết nối trực tiếp có thể nhanh hơn.
 
 | Model | Dung lượng | Thời gian tải | Tốc độ |
 |---|---|---|---|
@@ -182,12 +182,28 @@ Mới đo **một lần**, chưa ghi `direct` hay `relay`.
 - Tốc độ gần bằng nhau ở hai file nên thời gian tải tỉ lệ với dung lượng: nút thắt là băng thông,
   giảm dung lượng sẽ giảm thời gian tương ứng. Với ~2,7 MB/s, mục tiêu 3 đến 5 MB tương ứng khoảng
   1,1 đến 1,9 s.
-- **Thời gian từ tải xong đến hiện hình** (đo bằng đoạn tạm trong `avatar-test.tsx`, một lần,
-  iPhone, 5G, `AvatarSample_E`): tải mạng 6708 ms; tải xong → parse xong 253 ms; parse xong → khung
-  đầu 587 ms; tổng **tải xong → hiện hình 840 ms** (~11% tổng). Mạng chiếm ~89% nên ưu tiên giảm
+- **Thời gian từ tải xong đến hiện hình** (đo bằng đoạn tạm trong `avatar-test.tsx`, hai lần,
+  iPhone, 5G, `AvatarSample_E`):
+
+  | | Lần 1 | Lần 2 | Trung bình |
+  |---|---|---|---|
+  | Tải mạng | 6708 ms | 7598 ms | ~7150 ms |
+  | Tải xong → parse xong | 253 ms | 254 ms | ~254 ms |
+  | Parse xong → khung đầu | 587 ms | 654 ms | ~620 ms |
+  | **Tải xong → hiện hình** | 840 ms | 908 ms | ~875 ms |
+
+  Giải mã và hiện hình ~11% tổng. Mạng chiếm ~89% nên ưu tiên giảm
   dung lượng truyền (WebP, bỏ Thumbnail); chưa cần giảm texture xuống 1024 vì lý do thời gian tải.
-- **Chưa đo:** đo lặp lại, bản build, `direct` hay `relay`; bộ nhớ GPU/RAM trên iPhone (giảm 1024
-  vẫn có thể có ích về bộ nhớ, chưa có số).
+- **Bộ nhớ texture (ước lượng tính từ kích thước ảnh, RGBA 8 bit, có mipmap; không phải số đo):**
+  27 texture dùng khi render ~117 MB, thêm `Thumbnail` nếu bị nạp ~138 MB, nếu hạ 3 texture 2048
+  xuống 1024 còn ~69 MB (giảm ~48 MB). WebP chỉ giảm dung lượng truyền, **không giảm** số này vì
+  texture được giải nén thành ảnh thô. Trên iPhone 15 Pro Max mức ~117 MB chưa là vấn đề; hạ 1024
+  là phương án dự phòng cho máy yếu hơn.
+- **Chưa đo:** lần thứ ba, bản build; bộ nhớ thật trên iPhone (Web Inspector không thấy
+  mục Memory ở tab Timelines trên bản Safari đang dùng; chỉ có ước lượng ở trên).
+- **Đoạn đo tạm:** `avatar-test.tsx` có hàm `showTiming` (chưa commit, in kết quả ở cuối màn hình)
+  để đo lại sau 4.6.1 bằng đúng link:
+  `http://<ip>:5173/?avatar-test&model=/avatars/AvatarSample_E.web.vrm`. Gỡ sau khi đo xong.
 - Ghi chú khi đo: `/?avatar-test` mặc định tải `Mocking_Spit_Strawberry`, phải thêm
   `&model=/avatars/AvatarSample_E.vrm` để đo model đang dùng ở trang chính (trang chính đọc
   `VITE_AVATAR_URL` trong `apps/web/.env.local`).
