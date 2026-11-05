@@ -130,7 +130,7 @@ Làm theo thứ tự, dừng khi đủ nhanh; không cần làm hết.
 | # | Việc | Ghi chú |
 |---|---|---|
 | 4.6.0 | Đo: thời gian tải file qua Tailscale từ điện thoại; thời gian từ tải xong đến `onReady` | Bắt buộc làm trước. Nếu thời gian chủ yếu nằm ở giải mã và đưa lên GPU thì ưu tiên giảm kích thước texture |
-| 4.6.1 | Nén texture sang WebP và giảm kích thước (1024 hoặc 512) | Ước tính 17,9 MB còn 3 đến 5 MB. Lưu thành file riêng, **không ghi đè** `AvatarSample_E.vrm` gốc. Cần so mắt màu và MToon |
+| 4.6.1 | Bỏ `Thumbnail`, nén texture sang WebP, **giữ 2048** (chỉ giảm 1024 nếu sau này thấy thiếu RAM trên iPhone) | Ước tính 17,9 MB còn ~4 đến 5 MB. Lưu thành file riêng `AvatarSample_E.web.vrm`, **không ghi đè** `AvatarSample_E.vrm` gốc. Xem "Thông tin cho 4.6.1" bên dưới. Cần so mắt màu và MToon |
 | 4.6.2 | Preload: bắt đầu tải model khi vào màn hình, không đợi bật avatar | Không giảm dung lượng nhưng giấu thời gian chờ |
 | 4.6.3 | Phục vụ bản build (`apps/web/dist`) thay cho Vite dev server | Bắt buộc trước khi đo ở phase 5.6 |
 
@@ -144,6 +144,57 @@ Chỉ làm khi 4.6.1 đến 4.6.3 vẫn chưa đạt:
 hình nhìn không xấu đi so với bản gốc, và ghi lại kết quả ở mục này.
 
 Giấy phép `AvatarSample_E` đã kiểm tra cho phép chỉnh sửa (xem "Giấy phép model").
+
+### Thông tin cho 4.6.1
+
+Đọc từ phần JSON của `AvatarSample_E.vrm` (file 17,1 MiB): 28 ảnh PNG chiếm 13,6 MiB, phần còn lại
+(hình học và dữ liệu khác) ~3,5 MiB.
+
+| Nhóm texture | Dung lượng | Ghi chú |
+|---|---|---|
+| `F00_002_Body_00`, `F00_002_Onepiece_01`, `F00_002_02_Body_00_nml` (2048×2048) | ~8 MiB | Lớn nhất; `_nml` là normal map |
+| `Thumbnail` (2048×2048) | 2,7 MiB | Chỉ là ảnh đại diện của VRM, khi render không dùng: **bỏ hẳn** |
+| Face, HairBack, Hair, EyeWhite, Shoes, EyeIris… (1024 và 512) | ~3 MiB | Giữ kích thước, đổi WebP |
+
+Phương án: bỏ `Thumbnail`, đổi toàn bộ texture sang WebP, giữ nguyên kích thước 2048. Lý do: ở 4.6.0
+mạng chiếm ~89% thời gian, giải mã và hiện hình chỉ ~0,84 s.
+
+Rủi ro cần kiểm:
+
+- WebP trong VRM (`EXT_texture_webp`) không phải chuẩn VRM; three.js `GLTFLoader` đọc được nên
+  không phải đổi loader, nhưng viewer VRM khác có thể không mở được. Bản gốc được giữ.
+- Normal map (`_nml`) nén lossy dễ làm hỏng vân sáng tối: dùng chất lượng cao (90 trở lên).
+- So mắt màu da và MToon giữa bản gốc và bản mới; đo lại bằng đoạn tạm trong `avatar-test.tsx`
+  để có số "sau" cùng cách đo với số "trước" bên dưới.
+- Công cụ: `@gltf-transform/cli` kèm `sharp`, chạy bằng `npx` ngoài dự án (không thêm vào `package.json`).
+
+### Kết quả đo trước (bước 4.6.0, làm một phần)
+
+Đo trên iPhone, mạng **5G**, qua Tailscale tới Vite dev server (không phải bản build), bằng trang
+`/?avatar-test` (trang chính `/` trắng khi vào bằng IP vì không phải secure context, xem dưới).
+Mới đo **một lần**, chưa ghi `direct` hay `relay`.
+
+| Model | Dung lượng | Thời gian tải | Tốc độ |
+|---|---|---|---|
+| `Mocking_Spit_Strawberry.vrm` | ~5,7 MB | 2 s | ~2,8 MB/s |
+| `AvatarSample_E.vrm` | ~17,9 MB | 6,63 s | ~2,7 MB/s |
+
+- Tốc độ gần bằng nhau ở hai file nên thời gian tải tỉ lệ với dung lượng: nút thắt là băng thông,
+  giảm dung lượng sẽ giảm thời gian tương ứng. Với ~2,7 MB/s, mục tiêu 3 đến 5 MB tương ứng khoảng
+  1,1 đến 1,9 s.
+- **Thời gian từ tải xong đến hiện hình** (đo bằng đoạn tạm trong `avatar-test.tsx`, một lần,
+  iPhone, 5G, `AvatarSample_E`): tải mạng 6708 ms; tải xong → parse xong 253 ms; parse xong → khung
+  đầu 587 ms; tổng **tải xong → hiện hình 840 ms** (~11% tổng). Mạng chiếm ~89% nên ưu tiên giảm
+  dung lượng truyền (WebP, bỏ Thumbnail); chưa cần giảm texture xuống 1024 vì lý do thời gian tải.
+- **Chưa đo:** đo lặp lại, bản build, `direct` hay `relay`; bộ nhớ GPU/RAM trên iPhone (giảm 1024
+  vẫn có thể có ích về bộ nhớ, chưa có số).
+- Ghi chú khi đo: `/?avatar-test` mặc định tải `Mocking_Spit_Strawberry`, phải thêm
+  `&model=/avatars/AvatarSample_E.vrm` để đo model đang dùng ở trang chính (trang chính đọc
+  `VITE_AVATAR_URL` trong `apps/web/.env.local`).
+- Trang chính `/` trắng khi vào bằng `http://<ip>:5173`: `App.tsx` chỉ render khi client Pipecat
+  đã được tạo, và việc này thất bại khi không phải secure context (suy ra từ code, chưa đọc
+  thông báo lỗi); `error` không được hiện khi `client` còn `null`. Vào bằng `localhost` thì bình
+  thường. Muốn đo trang chính trên điện thoại cần HTTPS (`tailscale serve`).
 
 ## Kế hoạch bước 4.7 (tay tự nhiên hơn)
 
