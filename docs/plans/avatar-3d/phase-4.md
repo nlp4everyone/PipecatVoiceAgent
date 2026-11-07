@@ -133,6 +133,7 @@ Làm theo thứ tự, dừng khi đủ nhanh; không cần làm hết.
 | 4.6.1 | Bỏ `Thumbnail`, nén texture sang WebP, **giữ 2048** (chỉ giảm 1024 nếu sau này thấy thiếu RAM trên iPhone) | Ước tính 17,9 MB còn ~4 đến 5 MB. Lưu thành file riêng `AvatarSample_E.web.vrm`, **không ghi đè** `AvatarSample_E.vrm` gốc. Xem "Thông tin cho 4.6.1" bên dưới. Cần so mắt màu và MToon |
 | 4.6.2 | Preload: bắt đầu tải model khi vào màn hình, không đợi bật avatar | Không giảm dung lượng nhưng giấu thời gian chờ |
 | 4.6.3 | Phục vụ bản build (`apps/web/dist`) thay cho Vite dev server | Bắt buộc trước khi đo ở phase 5.6 |
+| 4.6.4 | Cache file model: đặt `Cache-Control` cho `.vrm` khi phục vụ bản build, đo lần mở thứ hai | Làm sau 4.6.3 (cần server phục vụ `dist`). Xem "Kế hoạch 4.6.4" bên dưới |
 
 Chỉ làm khi 4.6.1 đến 4.6.3 vẫn chưa đạt:
 
@@ -144,6 +145,39 @@ Chỉ làm khi 4.6.1 đến 4.6.3 vẫn chưa đạt:
 hình nhìn không xấu đi so với bản gốc, và ghi lại kết quả ở mục này.
 
 Giấy phép `AvatarSample_E` đã kiểm tra cho phép chỉnh sửa (xem "Giấy phép model").
+
+### Kế hoạch 4.6.4 (cache file model, mức cơ bản)
+
+Hiện trạng (đọc từ code, **chưa đo**): `useLoader(GLTFLoader, url)` (`avatar-stage.tsx:202`) chỉ cache
+trong bộ nhớ của tab, tải lại trang là mất. `vite.config.ts` không đặt `Cache-Control`, không có
+service worker. Các số đo ở 4.6.0 và 4.6.1 dùng tab riêng tư nên là thời gian lần đầu, không có cache.
+Preload (4.6.2) chỉ giấu lần tải đầu; cache mới làm các lần sau không phải tải lại.
+
+| # | Việc | Ghi chú |
+|---|---|---|
+| 4.6.4.0 | Đo lần mở thứ hai ở tab thường (không riêng tư) trên Safari iPhone với bản dev hiện tại | Biết trình duyệt đã tự cache theo heuristic chưa |
+| 4.6.4.1 | Đặt `Cache-Control: public, max-age=31536000, immutable` cho `.vrm` ở server phục vụ `dist` | Chưa rõ server nào phục vụ `dist` (nginx, Caddy hay bot), chốt ở 4.6.3 |
+| 4.6.4.2 | Đổi tên file khi nội dung đổi (thêm hash, ví dụ `AvatarSample_E.web.<hash>.vrm`) và cập nhật `VITE_AVATAR_URL` | Tên cố định + `immutable` sẽ giữ mãi bản cũ |
+| 4.6.4.3 | Đo lần mở thứ hai trên Safari và trên WKWebView | Phase 5 chưa biết WKWebView có giữ cache giữa các lần mở app không (`phase-5.md`) |
+| 4.6.4.4 | Nếu cache hay bị mất hoặc WKWebView không giữ: nâng cấp theo "Hướng phát triển sau" bên dưới | Chỉ làm khi số đo ở 4.6.4.3 cho thấy cần |
+
+**Xong khi:** lần mở thứ hai không tải lại model (mạng gần 0 ms trong số đo), và ghi lại kết quả
+trên Safari lẫn WebView ở mục này.
+
+Lưu ý: mức cơ bản dựa vào cache HTTP của trình duyệt. Trên iOS, cache có thể bị xóa mà không báo
+trước (chưa đo mức độ). Đổi tên file khi đổi model đang làm thủ công nên dễ quên.
+
+#### Hướng phát triển sau (chưa làm)
+
+- **Cache API hoặc IndexedDB do code quản lý.** Không phụ thuộc cơ chế xóa cache của iOS.
+  Khi nào chuyển: số đo 4.6.4.3 cho thấy lần mở thứ hai hay phải tải lại.
+- **Service worker.** Cache cả model lẫn file build, mở được khi mạng yếu. Nhược: thêm độ phức tạp,
+  phải quản lý phiên bản cache. Khi nào chuyển: cần chạy khi mạng kém, hoặc cần cache nhiều file.
+- **Hash tên file tự động.** Để Vite xử lý model như asset được import thay cho đổi tên thủ công.
+  Nhược: phải đổi cách đặt file (`*.vrm` đang bị `.gitignore` và nằm trong `public/`). Khi nào
+  chuyển: đã lỡ để lại bản cũ trong cache một lần.
+- **Cache phía native.** Nếu WKWebView không giữ cache giữa các lần mở app (câu hỏi chưa kiểm
+  chứng ở `phase-5.md`). Khi nào chuyển: chỉ khi đo trên WebView xác nhận mất cache.
 
 ### Thông tin cho 4.6.1
 
