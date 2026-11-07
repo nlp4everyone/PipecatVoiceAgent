@@ -201,9 +201,7 @@ Mới đo **hai lần**. Đường Tailscale kiểm tra sau khi đo: **relay** (
   là phương án dự phòng cho máy yếu hơn.
 - **Chưa đo:** lần thứ ba, bản build; bộ nhớ thật trên iPhone (Web Inspector không thấy
   mục Memory ở tab Timelines trên bản Safari đang dùng; chỉ có ước lượng ở trên).
-- **Đoạn đo tạm:** `avatar-test.tsx` có hàm `showTiming` (chưa commit, in kết quả ở cuối màn hình)
-  để đo lại sau 4.6.1 bằng đúng link:
-  `http://<ip>:5173/?avatar-test&model=/avatars/AvatarSample_E.web.vrm`. Gỡ sau khi đo xong.
+- **Đoạn đo tạm:** hàm `showTiming` trong `avatar-test.tsx` đã gỡ sau khi đo xong 4.6.1 (không có trong git).
 - Ghi chú khi đo: `/?avatar-test` mặc định tải `Mocking_Spit_Strawberry`, phải thêm
   `&model=/avatars/AvatarSample_E.vrm` để đo model đang dùng ở trang chính (trang chính đọc
   `VITE_AVATAR_URL` trong `apps/web/.env.local`).
@@ -211,6 +209,38 @@ Mới đo **hai lần**. Đường Tailscale kiểm tra sau khi đo: **relay** (
   đã được tạo, và việc này thất bại khi không phải secure context (suy ra từ code, chưa đọc
   thông báo lỗi); `error` không được hiện khi `client` còn `null`. Vào bằng `localhost` thì bình
   thường. Muốn đo trang chính trên điện thoại cần HTTPS (`tailscale serve`).
+
+### Kết quả bước 4.6.1 (WebP, bỏ Thumbnail)
+
+Tạo `apps/web/public/avatars/AvatarSample_E.web.vrm` từ `AvatarSample_E.vrm` (file gốc giữ nguyên;
+`*.vrm` bị `.gitignore` nên không vào repo). Cách làm: script Node dùng `sharp`, sửa thẳng file GLB
+(không dùng `@gltf-transform/cli` vì nó có thể làm mất phần mở rộng `VRM`). Script chạy ngoài dự
+án, không nằm trong repo. Cần tạo lại thì viết lại theo các bước sau:
+
+- Bỏ texture `Thumbnail` (texture/image/bufferView cuối cùng) và đặt `extensions.VRM.meta.texture = -1`.
+- Đổi 27 ảnh PNG sang WebP, giữ 2048: chất lượng 90, riêng `_nml` là 95.
+- Mỗi texture dùng `EXT_texture_webp`, khai báo vào `extensionsUsed` và `extensionsRequired`.
+- Dựng lại buffer, căn 4 byte, ghi lại GLB.
+
+Kết quả đo trên iPhone, tab riêng tư (không cache), 4 lần mỗi bản, đường Tailscale vẫn là relay
+(DERP `hkg`, trễ 89 đến 114 ms). Tốc độ mạng lần này thấp hơn lần đo 4.6.0 nên chỉ so sánh tỉ lệ:
+
+| | Gốc | Bản WebP |
+|---|---|---|
+| Dung lượng | 17,9 MB | 4,47 MB (giảm 4,0 lần) |
+| Tải mạng (trung bình) | ~16300 ms | ~4150 ms (giảm 3,9 lần) |
+| Tốc độ | ~1,10 MB/s | ~1,08 MB/s |
+| Tải xong → hiện hình | ~875 ms (4.6.0) | ~700 ms |
+| Tổng | ~17,2 s | ~4,85 s |
+
+- Tốc độ hai bản bằng nhau nên mức giảm đến từ dung lượng, đúng dự đoán ở 4.6.0.
+- Giải mã WebP không làm chậm hiện hình, số còn thấp hơn bản PNG.
+- So mắt màu da, tóc, mắt, MToon giữa hai bản: màu tương tự, không thấy khác biệt.
+- Bộ nhớ texture trên GPU không đổi (~117 MB ước lượng), vì WebP chỉ giảm dung lượng truyền.
+- `apps/web/.env.local` đã đặt `VITE_AVATAR_URL=/avatars/AvatarSample_E.web.vrm`.
+- Rủi ro còn lại: `EXT_texture_webp` là phần mở rộng bắt buộc nên viewer VRM khác có thể không mở
+  được bản `.web.vrm`; bản gốc vẫn dùng được cho việc đó.
+- Chưa đo: bản build (làm ở 4.6.3). Kết nối trực tiếp (không qua relay) có thể nhanh hơn.
 
 ## Kế hoạch bước 4.7 (tay tự nhiên hơn)
 
