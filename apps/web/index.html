@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <title>VoiceAgent</title>
+    <!-- Tải model avatar ngay khi đọc HTML, song song với JS (4.6.2). Phải khớp AVATAR_URL mặc định
+         trong src/components/avatar/vrm-frame.ts; đổi VITE_AVATAR_URL thì sửa cả dòng này. -->
+    <link rel="preload" as="fetch" crossorigin href="/avatars/Mocking_Spit_Strawberry.vrm" />
     <script>
       // Bật class "dark" theo theme hệ thống trước khi render để không bị chớp màu.
       (function () {

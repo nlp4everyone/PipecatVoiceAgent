@@ -287,8 +287,19 @@ Làm xong phần code, kiểm tra một ca trên iPhone bằng cảm nhận, ch�
 - Đã kiểm tra: type-check, lint (không thêm cảnh báo), build, và bản build có chứa code preload.
 - Đã thử trên iPhone (Safari, tab riêng tư, qua Tailscale, `vite preview`): vào bằng quả cầu, bấm
   chuyển sang avatar thì avatar hiện trong khoảng 1 giây (cảm nhận, không đo).
-- Chưa kiểm tra: ca vào thẳng bằng avatar (chunk và model có tải song song không); thứ tự request;
-  nhánh tiết kiệm dữ liệu (Safari không có `navigator.connection`); ca lỗi khi file model bị chặn.
+- Ca vào thẳng bằng avatar (Web Inspector từ Mac, iPhone, tab riêng tư, qua Tailscale, `vite preview`):
+  **không đạt**. File `.vrm` chỉ bắt đầu tải sau khi các chunk three.js (`GLTFLoader`, `three.core`,
+  `events`) tải xong. Nguyên nhân: `preload.ts` import `GLTFLoader`, `@react-three/fiber`,
+  `three-vrm` nên `useLoader.preload` phải đợi các chunk đó, tức là tải model vẫn nối đuôi tải code.
+  Số đo là quan sát bằng mắt trên waterfall, không có mili giây.
+- Sửa: thêm `<link rel="preload" as="fetch" crossorigin>` trỏ tới file model mặc định trong
+  `apps/web/index.html`, để trình duyệt tải `.vrm` ngay khi đọc HTML. `GLTFLoader` gọi `fetch` cùng URL
+  sẽ lấy từ cache HTTP, nên cache của `useLoader` không phải đổi. Chưa đo lại sau khi sửa.
+  Đánh đổi: dòng này chạy cả khi người dùng ở quả cầu, sprite hay bật tiết kiệm dữ liệu. Nếu tốn
+  băng thông đáng kể thì thêm điều kiện (chèn thẻ từ script nhỏ ở `<head>`). URL trong HTML phải khớp
+  `AVATAR_URL` mặc định; đổi `VITE_AVATAR_URL` thì sửa cả hai chỗ.
+- Chưa kiểm tra: thứ tự request; nhánh tiết kiệm dữ liệu (Safari không có `navigator.connection`);
+  ca lỗi khi file model bị chặn.
 - Lưu ý khi đọc số đo: `vite preview` nén gzip file `.vrm` (4,47 MB còn khoảng 1,57 MB), còn Vite dev
   server ở 4.6.1 thì không nén, nên không so thẳng được với số cũ. Với bản WebP, gzip giảm đáng kể
   (khác với PNG gốc ở 4.6). Server phục vụ bản build thật (4.6.3) cần bật nén cho `.vrm`.
