@@ -30,12 +30,22 @@ nhưng không chọn vì `three-vrm` trên React Native hay lỗi texture và lo
 
 | # | Việc | Xong khi |
 |---|---|---|
-| 5.1 | Thêm trang avatar độc lập (không kết nối WebRTC), nhận dữ liệu qua `postMessage`. Thêm nguồn "mức âm từ ngoài" cho `useAvatarLipsync` (hiện chỉ nhận `MediaStreamTrack`) | Chạy được trên trình duyệt di động |
+| 5.1 | Thêm trang avatar độc lập (không kết nối WebRTC), nhận dữ liệu qua `postMessage`. Thêm nguồn "mức âm từ ngoài" cho `useAvatarLipsync` (hiện chỉ nhận `MediaStreamTrack`). Trang nhúng phải gọi `preloadAvatar()` (`apps/web/src/components/avatar/preload.ts`, bước 4.6.2) ngay khi mở; xem ghi chú bên dưới | Chạy được trên trình duyệt di động |
 | 5.2 | Màn hình WebView trong `apps/mobile` | Avatar hiện trong màn hình gọi |
 | 5.3 | Bridge mức âm, trạng thái, biểu cảm; nội suy mức âm; chỉnh lại `NOISE_FLOOR`/`FULL_LEVEL` theo thang mức âm; hook đọc `RemoteAudioLevel` luôn theo bot (`use-orb-level.ts` hiện chỉ theo một nguồn) | Miệng khớp, không giật |
 | 5.4 | Tắt render khi app xuống nền (`AppState`) | Không tốn pin khi nền |
 | 5.5 | Tuỳ chọn avatar / quả cầu trong app | Chuyển được, quả cầu vẫn là dự phòng |
 | 5.6 | Đo trên iPhone 15 Pro Max: fps, nhiệt, pin sau 10 phút | Đạt ngân sách. Điều kiện trước: đã phục vụ bản build (4.6.3), không đo trên Vite dev server; nên làm 4.6.1 trước để số đo không bị nặng vì tải model |
+
+### Preload model trong WebView (ghi chú cho 5.1)
+
+Bước 4.6.2 chỉ gắn preload vào `voice-screen.tsx` của web. Trang `?avatar-embed` là trang khác nên
+không tự có: phải gọi `preloadAvatar()` ngay khi trang mở, song song với việc nạp chunk.
+
+- Cache của preload (`useLoader`) nằm trong bộ nhớ trang, mất mỗi khi WebView được tạo lại. Chưa
+  biết WKWebView có giữ cache HTTP của file `.vrm` giữa các lần mở app không (xem 4.6.4).
+- Nếu lần mở WebView vẫn chậm: tạo sẵn một WebView ẩn lúc app khởi động để tải model trước
+  (chưa làm, ngoài kế hoạch hiện tại; nên đo trước rồi mới quyết).
 
 ### Trang avatar được phục vụ thế nào
 
