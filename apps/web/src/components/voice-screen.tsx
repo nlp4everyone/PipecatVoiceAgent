@@ -18,7 +18,7 @@ import {
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import { AvatarErrorBoundary } from "@/components/avatar/avatar-error-boundary";
-import { rememberSprite, shouldUseSprite } from "@/components/avatar/quality";
+import { hasWebGL, rememberSprite, shouldUseSprite } from "@/components/avatar/quality";
 import { type ExpressionTag, isExpressionTag } from "@/components/avatar/use-avatar-state";
 import { ChatOrb, type OrbState } from "@/components/chat-orb";
 import { unlockBotAudio } from "@/components/pipecat/bot-audio";
@@ -159,6 +159,26 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
     setSpriteTier(true);
   }, []);
   const Stage = spriteTier ? SpriteStage : AvatarStage;
+
+  // Tải trước chunk three.js và file model song song, để lúc hiện avatar khỏi phải đợi nối tiếp.
+  // Đang ở avatar thì làm ngay; đang ở quả cầu thì làm lúc rảnh, và bỏ qua khi bật tiết kiệm dữ liệu.
+  useEffect(() => {
+    if (spriteTier || !hasWebGL()) return;
+    const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    const run = () => void import("@/components/avatar/preload").then((m) => m.preloadAvatar());
+    if (showAvatar) {
+      run();
+      return;
+    }
+    if (conn?.saveData) return;
+    const idle = window.requestIdleCallback;
+    if (idle) {
+      const id = idle(run, { timeout: 3000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(run, 1500);
+    return () => window.clearTimeout(id);
+  }, [showAvatar, spriteTier]);
 
   // Đổi giữa quả cầu và avatar chỉ đổi phần hiển thị; kết nối với bot giữ nguyên.
   const toggleVisual = () => {

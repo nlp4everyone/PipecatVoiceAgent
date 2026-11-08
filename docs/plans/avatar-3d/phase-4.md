@@ -276,6 +276,25 @@ Kết quả đo trên iPhone, tab riêng tư (không cache), 4 lần mỗi bản
   được bản `.web.vrm`; bản gốc vẫn dùng được cho việc đó.
 - Chưa đo: bản build (làm ở 4.6.3). Kết nối trực tiếp (không qua relay) có thể nhanh hơn.
 
+### Kết quả bước 4.6.2 (preload)
+
+Làm xong phần code, kiểm tra một ca trên iPhone bằng cảm nhận, chưa có số đo.
+
+- Code: `apps/web/src/components/avatar/preload.ts` (`preloadAvatar()` gọi `useLoader.preload`, dùng
+  chung `registerVrm` với `Avatar` để khoá cache khớp). `voice-screen.tsx` gọi khi vào màn hình: đang ở
+  avatar thì ngay, đang ở quả cầu thì lúc rảnh (`requestIdleCallback`, Safari iOS dùng `setTimeout`
+  1,5 giây). Bỏ qua khi không có WebGL, đang ở sprite, hoặc bật tiết kiệm dữ liệu (chỉ nhánh quả cầu).
+- Đã kiểm tra: type-check, lint (không thêm cảnh báo), build, và bản build có chứa code preload.
+- Đã thử trên iPhone (Safari, tab riêng tư, qua Tailscale, `vite preview`): vào bằng quả cầu, bấm
+  chuyển sang avatar thì avatar hiện trong khoảng 1 giây (cảm nhận, không đo).
+- Chưa kiểm tra: ca vào thẳng bằng avatar (chunk và model có tải song song không); thứ tự request;
+  nhánh tiết kiệm dữ liệu (Safari không có `navigator.connection`); ca lỗi khi file model bị chặn.
+- Lưu ý khi đọc số đo: `vite preview` nén gzip file `.vrm` (4,47 MB còn khoảng 1,57 MB), còn Vite dev
+  server ở 4.6.1 thì không nén, nên không so thẳng được với số cũ. Với bản WebP, gzip giảm đáng kể
+  (khác với PNG gốc ở 4.6). Server phục vụ bản build thật (4.6.3) cần bật nén cho `.vrm`.
+- Chưa có số "trước" và "sau" cùng điều kiện. Muốn có thì thêm lớp phủ thời gian tạm hoặc dùng Web
+  Inspector từ Mac, rồi đo cả hai kiểu có và không gzip.
+
 ## Kế hoạch bước 4.7 (tay tự nhiên hơn)
 
 Hiện trạng (đọc từ code): tay chỉ được hạ một góc cố định `ARM_RAD` (58°) bằng cách đặt
