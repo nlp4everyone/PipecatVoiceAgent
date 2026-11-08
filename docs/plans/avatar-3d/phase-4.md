@@ -294,7 +294,10 @@ Làm xong phần code, kiểm tra một ca trên iPhone bằng cảm nhận, ch�
   Số đo là quan sát bằng mắt trên waterfall, không có mili giây.
 - Sửa: thêm `<link rel="preload" as="fetch" crossorigin>` trỏ tới file model mặc định trong
   `apps/web/index.html`, để trình duyệt tải `.vrm` ngay khi đọc HTML. `GLTFLoader` gọi `fetch` cùng URL
-  sẽ lấy từ cache HTTP, nên cache của `useLoader` không phải đổi. Chưa đo lại sau khi sửa.
+  sẽ lấy từ cache HTTP, nên cache của `useLoader` không phải đổi.
+- Đo lại sau khi sửa (cùng điều kiện): **đạt**. `.vrm` bắt đầu cùng lúc với các chunk three.js, không
+  còn đợi chúng. Quan sát bằng mắt, không có mili giây. Chưa xác nhận `.vrm` chỉ được tải một lần
+  (nếu `GLTFLoader` không dùng lại bản preload thì sẽ tải hai lần).
   Đánh đổi: dòng này chạy cả khi người dùng ở quả cầu, sprite hay bật tiết kiệm dữ liệu. Nếu tốn
   băng thông đáng kể thì thêm điều kiện (chèn thẻ từ script nhỏ ở `<head>`). URL trong HTML phải khớp
   `AVATAR_URL` mặc định; đổi `VITE_AVATAR_URL` thì sửa cả hai chỗ.
