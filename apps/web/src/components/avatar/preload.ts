@@ -32,7 +32,13 @@ export class AvatarLoader extends GLTFLoader {
     early.data.then(
       (buffer) => {
         const base = this.path !== "" ? this.path : LoaderUtils.extractUrlBase(url);
-        this.parse(buffer, base, onLoad, onError);
+        // GLTFLoader.load tự bọc parse trong try/catch; ở đây phải làm lại, nếu không file hỏng
+        // ném lỗi trong promise, onError không bao giờ chạy và Suspense treo mãi.
+        try {
+          this.parse(buffer, base, onLoad, onError);
+        } catch (e) {
+          onError?.(e);
+        }
       },
       () => super.load(url, onLoad, onProgress, onError),
     );
