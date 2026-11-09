@@ -8,8 +8,7 @@ import { PerformanceMonitor } from "@react-three/drei";
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import { Component, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MathUtils, Mesh, Object3D, type PerspectiveCamera } from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { registerVrm } from "./preload";
+import { AvatarLoader, registerVrm } from "./preload";
 
 import type { OrbState } from "@/components/chat-orb";
 import { cn } from "@/lib/utils";
@@ -199,7 +198,7 @@ interface AvatarProps {
 function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
   const { camera } = useThree();
   const sampleMouth = useAvatarLipsync(botTrack);
-  const gltf = useLoader(GLTFLoader, url, registerVrm);
+  const gltf = useLoader(AvatarLoader, url, registerVrm);
   const vrm = gltf.userData.vrm as VRM;
   const lookTarget = useMemo(() => new Object3D(), []);
   const blink = useRef({ next: 2, t: -1 });
