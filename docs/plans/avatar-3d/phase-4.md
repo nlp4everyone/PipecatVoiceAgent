@@ -316,8 +316,18 @@ Làm xong phần code, kiểm tra một ca trên iPhone bằng cảm nhận, ch�
   `localStorage` và `navigator.connection` ngay trong script đó).
   Đổi `VITE_AVATAR_URL` không cần sửa tay vì plugin đọc cùng biến; chỉ `DEFAULT_AVATAR_URL` trong
   `vite.config.ts` phải khớp mặc định trong `vrm-frame.ts`.
-- Chưa kiểm tra: thứ tự request; nhánh tiết kiệm dữ liệu (Safari không có `navigator.connection`);
-  ca lỗi khi file model bị chặn.
+- Ca lỗi (headless Chrome + `vite dev`, trang `/?avatar-expression`, chặn request bằng puppeteer):
+  - Model thật: 1 request, có canvas, không lỗi.
+  - 404 và mất mạng: 2 request (fetch sớm rồi tải lại), `LoadBoundary` bắt lỗi, canvas bị gỡ, trang không treo. Đạt.
+  - Request đầu 500, request sau ổn: đường lùi chạy, avatar vẫn hiện. Đạt.
+  - File hỏng (200 nhưng không phải VRM): **lỗi**. `AvatarLoader` gọi `parse` trong `.then` mà không
+    `try/catch` (`GLTFLoader.load` gốc có), nên `onError` không chạy và Suspense treo mãi ở "Đang tải".
+    Đã sửa bằng `try/catch` quanh `parse`; chạy lại thì canvas bị gỡ, trang không treo. Đạt.
+  - Cả ca 404, mất mạng và file hỏng đều có `pageerror` trong dev; nhiều khả năng React dev ném lại lỗi
+    đã được boundary bắt, chưa so với bản trước 4.6.2.
+  - Chưa kiểm tra: `voice-screen` đổi sang sprite/quả cầu khi avatar lỗi (trang test không truyền `onError`).
+- Chưa kiểm tra: thứ tự request (mới quan sát bằng mắt); nhánh tiết kiệm dữ liệu (Safari không có
+  `navigator.connection`).
 - Lưu ý khi đọc số đo: `vite preview` nén gzip file `.vrm` (4,47 MB còn khoảng 1,57 MB), còn Vite dev
   server ở 4.6.1 thì không nén, nên không so thẳng được với số cũ. Với bản WebP, gzip giảm đáng kể
   (khác với PNG gốc ở 4.6). Server phục vụ bản build thật (4.6.3) cần bật nén cho `.vrm`.
