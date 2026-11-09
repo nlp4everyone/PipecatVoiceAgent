@@ -292,15 +292,30 @@ Làm xong phần code, kiểm tra một ca trên iPhone bằng cảm nhận, ch�
   `events`) tải xong. Nguyên nhân: `preload.ts` import `GLTFLoader`, `@react-three/fiber`,
   `three-vrm` nên `useLoader.preload` phải đợi các chunk đó, tức là tải model vẫn nối đuôi tải code.
   Số đo là quan sát bằng mắt trên waterfall, không có mili giây.
-- Sửa: thêm `<link rel="preload" as="fetch" crossorigin>` trỏ tới file model mặc định trong
-  `apps/web/index.html`, để trình duyệt tải `.vrm` ngay khi đọc HTML. `GLTFLoader` gọi `fetch` cùng URL
-  sẽ lấy từ cache HTTP, nên cache của `useLoader` không phải đổi.
-- Đo lại sau khi sửa (cùng điều kiện): **đạt**. `.vrm` bắt đầu cùng lúc với các chunk three.js, không
-  còn đợi chúng. Quan sát bằng mắt, không có mili giây. Chưa xác nhận `.vrm` chỉ được tải một lần
-  (nếu `GLTFLoader` không dùng lại bản preload thì sẽ tải hai lần).
-  Đánh đổi: dòng này chạy cả khi người dùng ở quả cầu, sprite hay bật tiết kiệm dữ liệu. Nếu tốn
-  băng thông đáng kể thì thêm điều kiện (chèn thẻ từ script nhỏ ở `<head>`). URL trong HTML phải khớp
-  `AVATAR_URL` mặc định; đổi `VITE_AVATAR_URL` thì sửa cả hai chỗ.
+- Sửa lần 1 (sai): thêm `<link rel="preload" as="fetch" crossorigin>` viết cứng trong `index.html`,
+  trỏ tới `Mocking_Spit_Strawberry.vrm` (mặc định của code). App thật dùng
+  `AvatarSample_E.web.vrm` (đặt bằng `VITE_AVATAR_URL` trong `.env.local`), nên thẻ preload tải nhầm
+  file 5,7 MB mà không ai dùng, còn model thật vẫn tải sau code. Lần đo "đạt" đó là nhìn nhầm file.
+  Phát hiện khi Network có hai dòng `.vrm` khác tên.
+- Sửa lần 2 (vẫn chưa đạt): thẻ `<link rel="preload">` do plugin chèn, lấy URL từ `VITE_AVATAR_URL`,
+  đã trỏ đúng `AvatarSample_E.web.vrm`. Nhưng Network trên Safari vẫn có hai dòng `.vrm`, cả hai
+  trạng thái 200, 1,57 MB (gzip): một dòng loại xhr (preload), một dòng loại tìm nạp (`GLTFLoader`).
+  Tức là model tải hai lần đầy đủ. Server gửi `Cache-Control: no-cache` + `Vary: Origin`, và Safari
+  không gộp request preload với `fetch` của `GLTFLoader` (có thể do `no-cache`, hoặc do hai request
+  chạy chồng nhau khi bản preload chưa xong). Chưa xác định chính xác nguyên nhân nào.
+- Sửa lần 3 (đạt): bỏ thẻ `<link>`. Plugin `preloadAvatarModel` trong `apps/web/vite.config.ts` chèn
+  một script ở đầu `<head>` tự `fetch` model một lần, giữ Promise ở `window.__avatarModel`.
+  `AvatarLoader` (kế thừa `GLTFLoader`, trong `preload.ts`) thấy URL khớp thì gọi `parse` trên dữ liệu
+  đó thay vì `fetch` lại; bản tải sớm lỗi hoặc URL khác thì rơi về cách tải thường. `Avatar` và
+  `preloadAvatar()` cùng dùng `AvatarLoader` nên khoá cache `useLoader` vẫn khớp. Không phụ thuộc
+  header cache nên không cần chờ 4.6.4.
+  Kết quả đo trên iPhone (cùng điều kiện): Network chỉ còn **một dòng** `.vrm`, avatar vẫn hiện.
+  Quan sát bằng mắt, chưa có mili giây.
+  Đánh đổi: script chạy cả khi người dùng ở quả cầu, sprite hay bật tiết kiệm dữ liệu, nên model vẫn
+  tải cho cả những người không dùng avatar. Nếu tốn băng thông đáng kể thì thêm điều kiện (đọc
+  `localStorage` và `navigator.connection` ngay trong script đó).
+  Đổi `VITE_AVATAR_URL` không cần sửa tay vì plugin đọc cùng biến; chỉ `DEFAULT_AVATAR_URL` trong
+  `vite.config.ts` phải khớp mặc định trong `vrm-frame.ts`.
 - Chưa kiểm tra: thứ tự request; nhánh tiết kiệm dữ liệu (Safari không có `navigator.connection`);
   ca lỗi khi file model bị chặn.
 - Lưu ý khi đọc số đo: `vite preview` nén gzip file `.vrm` (4,47 MB còn khoảng 1,57 MB), còn Vite dev
