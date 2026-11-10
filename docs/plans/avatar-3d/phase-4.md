@@ -325,9 +325,35 @@ Làm xong phần code, kiểm tra một ca trên iPhone bằng cảm nhận, ch�
     Đã sửa bằng `try/catch` quanh `parse`; chạy lại thì canvas bị gỡ, trang không treo. Đạt.
   - Cả ca 404, mất mạng và file hỏng đều có `pageerror` trong dev; nhiều khả năng React dev ném lại lỗi
     đã được boundary bắt, chưa so với bản trước 4.6.2.
-  - Chưa kiểm tra: `voice-screen` đổi sang sprite/quả cầu khi avatar lỗi (trang test không truyền `onError`).
-- Chưa kiểm tra: thứ tự request (mới quan sát bằng mắt); nhánh tiết kiệm dữ liệu (Safari không có
-  `navigator.connection`).
+  - `voice-screen` khi avatar lỗi (trang `/`, `localStorage` đặt sẵn chế độ avatar, chặn `.vrm` bằng
+    puppeteer, `vite dev`): 404 (2 request) và file hỏng (1 request) đều quay về quả cầu và hiện dòng
+    "Không tải được avatar, đang dùng quả cầu."; không treo, nút đổi về nhãn "Dùng avatar". Đạt.
+    Model thật: avatar hiện, không có thông báo lỗi.
+  - Hạn chế: sau lỗi, bấm "Dùng avatar" để thử lại không tạo request mới, dòng báo lỗi hiện lại ngay.
+    Có vẻ cache của `useLoader` giữ kết quả lỗi, nên phải tải lại trang mới tải lại model dù mạng đã ổn.
+    Chưa xác nhận nguyên nhân; xem lại ở 4.6.4 (cache).
+  - Chưa thử trên iPhone và khi đang trong cuộc gọi với bot.
+- Đo thứ tự request (headless Chrome, `vite build` + `vite preview`, vào thẳng `/` ở chế độ avatar, tắt
+  cache, CPU chậm 4 lần, giả lập mạng bằng CDP, các bản chạy xen kẽ, trung vị, ms). `base` = `6368e5e`
+  (chưa có script `fetch` ở `<head>`), `head` = `ed255b0`. `vrmStart-jsLastEnd` âm nghĩa là `.vrm` bắt
+  đầu trước khi JS cuối cùng tải xong.
+
+  | Mạng | Bản | `.vrm` bắt đầu | JS cuối tải xong | `vrmStart-jsLastEnd` | Avatar hiện |
+  |---|---|---|---|---|---|
+  | 20 Mbps, 50 ms (7 lần) | base | 932 | 872 | +61 | 3228 |
+  | | head | 279 | 1019 | −732 | 2827 |
+  | 4 Mbps, 100 ms (5 lần) | base | 1816 | 1755 | +58 | 6799 |
+  | | head | 144 | 2500 | −2357 | 6117 |
+  | 1,5 Mbps, 150 ms (7 lần) | base | 3970 | 3908 | +58 | 14047 |
+  | | head | 201 | 5826 | −5628 | 13465 |
+
+  Kết luận: `.vrm` bắt đầu tải từ 144–279 ms thay vì đợi JS, và mỗi lần chỉ có 1 request `.vrm`. Avatar
+  hiện sớm hơn khoảng 400 ms (20 Mbps), 680 ms (4 Mbps), 580 ms (1,5 Mbps), tức 4–12%. Cải thiện nhỏ vì
+  model 4,47 MB chiếm gần hết thời gian ở mạng chậm, và tải song song làm JS tải xong muộn hơn (cùng giành
+  băng thông). Giảm kích thước model (4.6.1) và bật nén khi phục vụ bản build (4.6.3) mới là phần lớn hơn.
+  Giới hạn: giả lập trên máy tính, chưa phải iPhone; chưa tính độ lệch giữa các lần chạy.
+- Chưa kiểm tra: nhánh tiết kiệm dữ liệu (Safari không có `navigator.connection`, nên chỉ thử được trên
+  Chrome).
 - Lưu ý khi đọc số đo: `vite preview` nén gzip file `.vrm` (4,47 MB còn khoảng 1,57 MB), còn Vite dev
   server ở 4.6.1 thì không nén, nên không so thẳng được với số cũ. Với bản WebP, gzip giảm đáng kể
   (khác với PNG gốc ở 4.6). Server phục vụ bản build thật (4.6.3) cần bật nén cho `.vrm`.
