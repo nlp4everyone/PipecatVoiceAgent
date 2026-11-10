@@ -360,7 +360,7 @@ Làm xong phần code, kiểm tra một ca trên iPhone bằng cảm nhận, ch�
 - Chưa có số "trước" và "sau" cùng điều kiện. Muốn có thì thêm lớp phủ thời gian tạm hoặc dùng Web
   Inspector từ Mac, rồi đo cả hai kiểu có và không gzip.
 
-### Kết quả bước 4.6.3 (phục vụ bản build, làm một phần)
+### Kết quả bước 4.6.3 (phục vụ bản build)
 
 Chốt dùng `vite preview` (cổng 4173) để đo ở phase 5.6; chỉ phía FE, bot giữ nguyên. Caddy/nginx để
 dành cho production. Không để bot tự phục vụ `dist` (trộn hai việc vào một tiến trình chỉ để đo).
@@ -377,8 +377,16 @@ dành cho production. Không để bot tự phục vụ `dist` (trộn hai việ
     bot tắt (tức proxy đã chuyển tới cổng 7860).
   - `.vrm` được gzip khi tải bằng GET: 4,47 MB còn 1.567.679 byte. `Content-Type` của `.vrm` để trống
     và `Cache-Control: no-cache` (4.6.4 xử lý).
-- **Chưa kiểm tra:** mở bản build trên iPhone qua Tailscale (cần đổi `tailscale serve` như trên); cuộc
-  gọi thật với bot (bot đang tắt, mic cần HTTPS); `/api/offer` và WebRTC qua proxy; nén bằng brotli.
+- Đã kiểm tra với bot thật (STT vLLM cổng 8000, TTS VieNeu cổng 8001, bot cổng 7860 chạy bằng
+  `uv run bot.py -t webrtc`): `POST /start` qua 4173 trả 200 kèm `sessionId` và cấu hình ICE; `POST
+  /api/offer` với body rỗng trả 422 do thiếu `sdp`, tức request đã tới bot. Qua HTTPS của `tailscale
+  serve` (443 trỏ 4173): trang 200, `.vrm` tải về 1.567.679 byte, `/start` 200.
+- Đã thử trên iPhone (Safari, qua `tailscale serve` HTTPS, 443 trỏ 4173): bản build mở được, avatar
+  hiện, gọi bot được (mic, WebRTC qua proxy của `vite preview` hoạt động). Người dùng báo bằng mắt, chưa
+  có số đo; chưa xem Network (số request `.vrm`) và chưa ghi nhận avatar mấp máy miệng khi bot nói.
+- **Chưa kiểm tra:** số request `.vrm` trên Safari ở bản build; nén bằng brotli; đo thời gian tải
+  (thuộc 4.6.4 và phase 5.6).
+- Sau khi đo xong cần đổi lại `tailscale serve` cổng 443 về 5173 nếu quay lại dùng dev server.
 - Checklist khi lên production (Caddy/nginx thay `vite preview`):
   - Phục vụ `apps/web/dist`; proxy `/start`, `/sessions`, `/api/offer` sang bot (cấu hình trong
     `vite.config.ts` không còn tác dụng), địa chỉ bot theo môi trường thật.
