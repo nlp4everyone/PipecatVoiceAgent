@@ -132,7 +132,7 @@ Làm theo thứ tự, dừng khi đủ nhanh; không cần làm hết.
 | 4.6.0 | Đo: thời gian tải file qua Tailscale từ điện thoại; thời gian từ tải xong đến `onReady` | Bắt buộc làm trước. Nếu thời gian chủ yếu nằm ở giải mã và đưa lên GPU thì ưu tiên giảm kích thước texture |
 | 4.6.1 | Bỏ `Thumbnail`, nén texture sang WebP, **giữ 2048** (chỉ giảm 1024 nếu sau này thấy thiếu RAM trên iPhone) | Ước tính 17,9 MB còn ~4 đến 5 MB. Lưu thành file riêng `AvatarSample_E.web.vrm`, **không ghi đè** `AvatarSample_E.vrm` gốc. Xem "Thông tin cho 4.6.1" bên dưới. Cần so mắt màu và MToon |
 | 4.6.2 | Preload: bắt đầu tải model khi vào màn hình, không đợi bật avatar | Không giảm dung lượng nhưng giấu thời gian chờ |
-| 4.6.3 | Phục vụ bản build (`apps/web/dist`) thay cho Vite dev server | Bắt buộc trước khi đo ở phase 5.6 |
+| 4.6.3 | Phục vụ bản build (`apps/web/dist`) thay cho Vite dev server | Bắt buộc trước khi đo ở phase 5.6. **Chốt dùng `vite preview`** (chỉ FE, bot giữ nguyên). Caddy/nginx (nén, `Cache-Control`, proxy sang bot) để dành cho production sau này; không bot tự phục vụ `dist` |
 | 4.6.4 | Cache file model: đặt `Cache-Control` cho `.vrm` khi phục vụ bản build, đo lần mở thứ hai | Làm sau 4.6.3 (cần server phục vụ `dist`). Xem "Kế hoạch 4.6.4" bên dưới |
 
 Chỉ làm khi 4.6.1 đến 4.6.3 vẫn chưa đạt:
@@ -359,6 +359,33 @@ Làm xong phần code, kiểm tra một ca trên iPhone bằng cảm nhận, ch�
   (khác với PNG gốc ở 4.6). Server phục vụ bản build thật (4.6.3) cần bật nén cho `.vrm`.
 - Chưa có số "trước" và "sau" cùng điều kiện. Muốn có thì thêm lớp phủ thời gian tạm hoặc dùng Web
   Inspector từ Mac, rồi đo cả hai kiểu có và không gzip.
+
+### Kết quả bước 4.6.3 (phục vụ bản build, làm một phần)
+
+Chốt dùng `vite preview` (cổng 4173) để đo ở phase 5.6; chỉ phía FE, bot giữ nguyên. Caddy/nginx để
+dành cho production. Không để bot tự phục vụ `dist` (trộn hai việc vào một tiến trình chỉ để đo).
+
+- Hiện trạng HTTPS: `tailscale serve` (chỉ trong tailnet): 443 trỏ `127.0.0.1:5173` (Vite dev), 8443 trỏ
+  `127.0.0.1:7860` (bot). Chưa đổi gì. Muốn đo bản build thì đổi 443 sang 4173:
+  `tailscale serve --bg --https=443 http://127.0.0.1:4173`, đo xong đổi lại 5173.
+- Lệnh: `cd apps/web && npm run build && npx vite preview --port 4173`.
+- Đã kiểm tra trên máy này (curl vào 4173, không qua iPhone, bot tắt):
+  - Build thành công; `dist/index.html` trỏ `AvatarSample_E.web.vrm` (đúng `VITE_AVATAR_URL` trong
+    `.env.local`) và file có trong `dist/avatars`.
+  - `vite preview` dùng lại `server.allowedHosts` và `server.proxy`, **không cần khối `preview`** trong
+    `vite.config.ts`: Host `*.ts.net` được phép (200), host lạ bị chặn (403), `POST /start` trả 502 khi
+    bot tắt (tức proxy đã chuyển tới cổng 7860).
+  - `.vrm` được gzip khi tải bằng GET: 4,47 MB còn 1.567.679 byte. `Content-Type` của `.vrm` để trống
+    và `Cache-Control: no-cache` (4.6.4 xử lý).
+- **Chưa kiểm tra:** mở bản build trên iPhone qua Tailscale (cần đổi `tailscale serve` như trên); cuộc
+  gọi thật với bot (bot đang tắt, mic cần HTTPS); `/api/offer` và WebRTC qua proxy; nén bằng brotli.
+- Checklist khi lên production (Caddy/nginx thay `vite preview`):
+  - Phục vụ `apps/web/dist`; proxy `/start`, `/sessions`, `/api/offer` sang bot (cấu hình trong
+    `vite.config.ts` không còn tác dụng), địa chỉ bot theo môi trường thật.
+  - Bật gzip/brotli cho `.vrm` và đặt `Content-Type` cho nó.
+  - Đặt `Cache-Control` cho `.vrm` (4.6.4); bắt buộc HTTPS cho mic (Caddy tự cấp chứng chỉ).
+  - Build với đúng `VITE_AVATAR_URL` (nhúng lúc build, quên thì tải nhầm model mặc định).
+  - `allowedHosts` là cơ chế riêng của Vite, không dùng nữa.
 
 ## Kế hoạch bước 4.7 (tay tự nhiên hơn)
 
