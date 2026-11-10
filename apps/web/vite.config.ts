@@ -32,9 +32,34 @@ function preloadAvatarModel(): Plugin {
   }
 }
 
+// Đặt Cache-Control cho file .vrm khi chạy `vite preview` (bước 4.6.4). Chỉ có tác dụng với preview; production
+// (Caddy/nginx) phải đặt lại. `immutable` chỉ cho file có hash nội dung trong tên (`*.<8 hex>.vrm`, tạo bằng
+// tools/hash-avatar.mjs); tên chưa hash dùng max-age ngắn để đổi model không bị giữ bản cũ.
+const HASHED_VRM = /\.[0-9a-f]{8}\.vrm$/
+function vrmCacheControl(): Plugin {
+  return {
+    name: 'vrm-cache-control',
+    configurePreviewServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const pathname = req.url?.split('?')[0] ?? ''
+        if (pathname.endsWith('.vrm')) {
+          const value = HASHED_VRM.test(pathname)
+            ? 'public, max-age=31536000, immutable'
+            : 'public, max-age=3600'
+          const setHeader = res.setHeader.bind(res)
+          // sirv đặt Cache-Control sau middleware này nên phải chặn ở setHeader.
+          res.setHeader = (name, v) => setHeader(name, name.toLowerCase() === 'cache-control' ? value : v)
+          setHeader('Cache-Control', value)
+        }
+        next()
+      })
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss(), preloadAvatarModel()],
+  plugins: [react(), tailwindcss(), preloadAvatarModel(), vrmCacheControl()],
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),
