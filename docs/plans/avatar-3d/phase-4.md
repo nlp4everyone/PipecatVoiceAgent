@@ -395,6 +395,45 @@ dành cho production. Không để bot tự phục vụ `dist` (trộn hai việ
   - Build với đúng `VITE_AVATAR_URL` (nhúng lúc build, quên thì tải nhầm model mặc định).
   - `allowedHosts` là cơ chế riêng của Vite, không dùng nữa.
 
+### Kết quả bước 4.6.4 (cache file model, làm một phần, đã có một ca đo trên iPhone)
+
+Đo bằng Chrome headless trên máy này (CDP, `vite build` + `vite preview` cổng 4173, trang
+`/?avatar-expression`, mở 3 lần liên tiếp trong cùng một profile để cache HTTP được giữ). **Bảng này chỉ là
+Chrome; số trên Safari iPhone ghi ở bên dưới, WKWebView chưa đo.** Số liệu là localhost, không qua mạng thật, chỉ dùng để so
+cách đặt header, không dùng làm thời gian tải.
+
+| Cách đặt `Cache-Control` cho `.vrm` | Lần 1 | Lần 2 và 3 |
+|---|---|---|
+| `no-cache` (trước khi sửa, 4.6.4.0) | tải 1.569.054 byte, 363 ms | vẫn gửi request kiểm tra lại, body 127 byte, 11 đến 16 ms |
+| `public, max-age=3600` (tên chưa hash) | tải 1.569.066 byte, 336 ms | lấy từ cache đĩa, 0 byte, 13 đến 16 ms |
+| `public, max-age=31536000, immutable` (tên có hash) | tải 1.569.081 byte, 400 ms | lấy từ cache đĩa, 0 byte, 12 đến 13 ms |
+
+Cả ba bản đều chỉ có 1 request `.vrm` mỗi lần mở. Với `no-cache`, mỗi lần mở vẫn tốn một vòng round-trip
+tới server (nhỏ trên localhost, nhưng qua Tailscale hay mạng di động thì có thể thấy được); `max-age`
+và `immutable` bỏ hẳn vòng đó.
+
+- 4.6.4.1: `apps/web/vite.config.ts` có plugin `vrmCacheControl` (chỉ cho `vite preview`). Tên có hash
+  (`*.<8 ký tự hex>.vrm`) nhận `immutable`; tên chưa hash nhận `max-age=3600`, nên đổi model mà quên hash
+  không bị giữ bản cũ cả năm. HTML vẫn `no-cache`.
+- 4.6.4.2: hash thủ công bằng `apps/web/tools/hash-avatar.mjs`:
+  `node tools/hash-avatar.mjs public/avatars/AvatarSample_E.web.vrm` sao chép (không ghi đè) sang
+  `AvatarSample_E.web.<hash>.vrm` và in giá trị `VITE_AVATAR_URL`; `node tools/hash-avatar.mjs --check`
+  kiểm tra `VITE_AVATAR_URL` trong `.env.local` có đúng hash của nội dung không. Hiện
+  `.env.local` đặt `/avatars/AvatarSample_E.web.f17b1b4a.vrm` (file `.vrm` và `.env.local` đều bị
+  `.gitignore`, nên chỉ có trên máy này). Chưa gắn `--check` vào bước build nào, nên vẫn dễ quên.
+- 4.6.4.3: hoãn phần WKWebView. `apps/mobile` hiện là app Expo/React Native, chỉ có `android/`, không có
+  `ios/` và chưa có `react-native-webview`; màn hình WebView là bước 5.2. Đo WKWebView sau khi có nó.
+  Phần Safari iPhone ở tab thường vẫn cần đo.
+- Đã thử trên Safari iPhone (tab thường, Web Inspector từ Mac, qua `tailscale serve` HTTPS, bản build với
+  file có hash): sau khi nhập lại địa chỉ, dòng `.vrm` mất **4,89 ms**, nên model nhiều khả năng lấy từ
+  cache. Chưa ghi lại nhãn nguồn (Memory/Disk Cache) và kích thước truyền, nên đây là suy ra từ thời gian;
+  chưa có số cho lần 3, chưa thử sau khi đóng hẳn Safari hay sau một thời gian dài (iOS có thể xoá cache mà
+  không báo).
+- Chưa làm: đo lại hạn chế "bấm Dùng avatar để thử lại
+  không tạo request mới" (xem 4.6.2), vẫn nghi cache của `useLoader` giữ kết quả lỗi.
+- Production (Caddy/nginx): đặt `Cache-Control: public, max-age=31536000, immutable` cho `*.<hash>.vrm`,
+  giữ ngắn hoặc `no-cache` cho tên không hash; build với `VITE_AVATAR_URL` trỏ file có hash.
+
 ## Kế hoạch bước 4.7 (tay tự nhiên hơn)
 
 Hiện trạng (đọc từ code): tay chỉ được hạ một góc cố định `ARM_RAD` (58°) bằng cách đặt
