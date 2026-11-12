@@ -15,10 +15,15 @@ const ExpressionTest = lazy(() =>
 const SpriteCapture = lazy(() =>
   import('./components/avatar/sprite-capture.tsx').then((m) => ({ default: m.SpriteCapture })),
 )
+// Trang chỉnh tư thế tay (phase 4.7): mở bằng /?avatar-pose.
+const PoseTest = lazy(() =>
+  import('./components/avatar/pose-test.tsx').then((m) => ({ default: m.PoseTest })),
+)
 const params = new URLSearchParams(location.search)
 const isAvatarTest = params.has('avatar-test')
 const isExpressionTest = params.has('avatar-expression')
 const isSpriteCapture = params.has('avatar-sprites')
+const isPoseTest = params.has('avatar-pose')
 
 // Trên iPhone không có console: hiện lỗi JS ngay trên màn hình để biết vì sao trang trống.
 function showFatal(message: string) {
@@ -36,9 +41,9 @@ if (isAvatarTest) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {isAvatarTest || isExpressionTest || isSpriteCapture ? (
+    {isAvatarTest || isExpressionTest || isSpriteCapture || isPoseTest ? (
       <Suspense fallback={<div className="h-dvh bg-background p-4 text-foreground">Đang tải trang thử…</div>}>
-        {isAvatarTest ? <AvatarTest /> : isSpriteCapture ? <SpriteCapture /> : <ExpressionTest />}
+        {isAvatarTest ? <AvatarTest /> : isSpriteCapture ? <SpriteCapture /> : isPoseTest ? <PoseTest /> : <ExpressionTest />}
       </Suspense>
     ) : (
       <App />
