@@ -2,6 +2,8 @@ import { useRef } from "react";
 
 import type { OrbState } from "@/components/chat-orb";
 
+import { ARM_RAD, type ArmPose } from "./vrm-frame";
+
 /** Tư thế đích của avatar cho một trạng thái hội thoại. Góc tính bằng radian. */
 export interface AvatarPose {
   /** Nghiêng đầu sang bên (xoay quanh trục z). */
@@ -18,6 +20,8 @@ export interface AvatarPose {
   sway: number;
   /** Nhịp thở: biên độ (rad) và tần số (rad/giây). */
   breath: { amp: number; speed: number };
+  /** Tư thế hai tay. */
+  arm: ArmPose;
   /** Giá trị đích của expression cảm xúc (0–1). */
   emotion: Partial<Record<"happy" | "relaxed" | "sad" | "surprised", number>>;
 }
@@ -30,6 +34,7 @@ const BASE: AvatarPose = {
   nod: { amp: 0, hz: 0 },
   sway: 0,
   breath: { amp: 0.015, speed: 1.6 },
+  arm: { upper: ARM_RAD },
   emotion: {},
 };
 

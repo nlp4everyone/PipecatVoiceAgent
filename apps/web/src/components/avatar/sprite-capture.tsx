@@ -30,7 +30,7 @@ import {
   MOUTH_JOY_OVERLAP,
   MOUTH_SORROW_OVERLAP,
 } from "./use-avatar-state";
-import { ARM_RAD, AVATAR_URL, frameUpperBody, prepareVrm } from "./vrm-frame";
+import { applyArmPose, AVATAR_URL, frameUpperBody, prepareVrm } from "./vrm-frame";
 
 declare global {
   interface Window {
@@ -67,10 +67,7 @@ function applyShot(vrm: VRM, shot: Shot, look: Object3D, cam: { y: number; z: nu
   const h = vrm.humanoid;
   const em = vrm.expressionManager;
 
-  const lArm = h.getNormalizedBoneNode("leftUpperArm");
-  const rArm = h.getNormalizedBoneNode("rightUpperArm");
-  if (lArm) lArm.rotation.z = ARM_RAD;
-  if (rArm) rArm.rotation.z = -ARM_RAD;
+  applyArmPose(vrm, pose.arm);
 
   const head = h.getNormalizedBoneNode("head");
   if (head) {

@@ -11,6 +11,27 @@ const ARM_ROOM = 4;
 /** Góc hạ tay khỏi tư thế chữ T (radian). */
 export const ARM_RAD = MathUtils.degToRad(58);
 
+/**
+ * Tư thế một tay (góc radian, dùng cho cả hai bên: bên phải được đảo dấu). Hiện chỉ có cánh tay trên;
+ * vai, khuỷu và cổ tay sẽ thêm ở 4.7.0.2 sau khi xác định trục xoay của từng bone.
+ */
+export interface ArmPose {
+  /** Hạ cánh tay trên khỏi tư thế chữ T (xoay quanh trục z). */
+  upper: number;
+}
+
+/**
+ * Đặt tư thế hai tay. Dùng chung cho avatar 3D và cho việc chụp sprite để hai bên khớp nhau.
+ * Bone nào model không có thì bỏ qua.
+ */
+export function applyArmPose(vrm: VRM, arm: ArmPose) {
+  const h = vrm.humanoid;
+  const left = h.getNormalizedBoneNode("leftUpperArm");
+  const right = h.getNormalizedBoneNode("rightUpperArm");
+  if (left) left.rotation.z = arm.upper;
+  if (right) right.rotation.z = -arm.upper;
+}
+
 /** Chuẩn bị model một lần: bỏ đỉnh thừa, quay VRM 0.x về hướng +z, tắt frustum culling. */
 export function prepareVrm(gltf: GLTF, vrm: VRM) {
   VRMUtils.removeUnnecessaryVertices(gltf.scene);
