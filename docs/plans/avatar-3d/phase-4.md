@@ -438,7 +438,7 @@ và `immutable` bỏ hẳn vòng đó.
 
 Hiện trạng (đọc từ code): tay chỉ được hạ một góc cố định `ARM_RAD` (58°) bằng cách đặt
 `leftUpperArm.rotation.z` và `rightUpperArm.rotation.z` một lần để thoát tư thế chữ T
-(`avatar-stage.tsx:249-252`, `sprite-capture.tsx:70-73`). Không có cẳng tay, khuỷu, bàn tay
+(`avatar-stage.tsx:248-249`, `sprite-capture.tsx:72-73`). Không có cẳng tay, khuỷu, bàn tay
 hay vai, và tay không đổi theo trạng thái hay lời nói, nên trông cứng.
 
 **Chọn hướng A (viết bằng code)**, vì nhẹ, không thêm file clip hay phụ thuộc, hợp với bậc nhẹ,
@@ -447,7 +447,9 @@ hưởng luôn qua WebView.
 
 | # | Việc | Ghi chú |
 |---|---|---|
-| 4.7.0 | Kiểm tra model có đủ bone `leftLowerArm`, `rightLowerArm`, `leftHand`, `rightHand`, `leftShoulder`, `rightShoulder` | VRM humanoid chuẩn thì có; chưa kiểm tra trên `AvatarSample_E` |
+| 4.7.0 | Kiểm tra model có đủ bone `leftLowerArm`, `rightLowerArm`, `leftHand`, `rightHand`, `leftShoulder`, `rightShoulder` | **Đã kiểm tra** (2026-11-12, đọc JSON trong file): xem "Phát hiện khi đọc code" bên dưới |
+| 4.7.0.1 | Tách đoạn đặt tư thế tay thành một hàm dùng chung (ví dụ `applyArmPose` trong `vrm-frame.ts`) cho `avatar-stage.tsx` và `sprite-capture.tsx`; thêm trường tay vào `AvatarPose` | Hiện hai nơi chép tay cùng đoạn `ARM_RAD`, thêm vai/khuỷu/bàn tay vào cả hai sẽ lệch nhau |
+| 4.7.0.2 | Trang debug (ví dụ `/?avatar-pose`) có thanh trượt cho từng góc, và xác định trục xoay của khuỷu/bàn tay/vai trong không gian normalized của VRM 0.x (kể cả thứ tự Euler) | Để "chỉnh bằng mắt" ở 4.7.1 không phải sửa code rồi nạp lại; trục xoay chưa ai thử |
 | 4.7.1 | Tư thế nghỉ: hạ tay khỏi chữ T bằng cả vai và cánh tay, gập nhẹ khuỷu, bàn tay thả lỏng | Thay cho một góc `ARM_RAD` duy nhất. Giá trị chỉnh bằng mắt |
 | 4.7.2 | Nhịp thở: vai nhún nhẹ, tay đung đưa rất nhỏ theo nhịp | Dùng chung bộ định thời với chuyển động nhàn rỗi |
 | 4.7.3 | Theo trạng thái: nói thì tay cử động nhẹ theo mức miệng, nghĩ thì nâng tay hơi gập, nghe thì tay yên | Trạng thái lấy từ `use-avatar-state.ts`, chuyển mượt bằng `damp` sẵn có |
@@ -455,6 +457,29 @@ hưởng luôn qua WebView.
 
 **Xong khi:** bản 3D có tư thế nghỉ tự nhiên và tay chuyển động nhẹ theo trạng thái mà không
 tốn rõ rệt fps ở bậc nhẹ; khung camera không cắt tay; sprite khớp tư thế mới.
+
+### Phát hiện khi đọc code (2026-11-12)
+
+Đọc `avatar-stage.tsx`, `use-avatar-state.ts`, `vrm-frame.ts`, `sprite-capture.tsx` và JSON nhúng trong các file `.vrm`. **Chưa chạy thử gì.**
+
+- **Bone (4.7.0):** cả 5 model trong `public/avatars` (`AvatarSample_D`, `AvatarSample_E` gốc và bản web, `Mocking_Spit_Strawberry`, `chibi03`) là VRM 0.x và có đủ `leftShoulder`, `rightShoulder`, `leftUpperArm`, `leftLowerArm`, `leftHand` (và bên phải), `upperChest`, `chest`, `spine`, `neck`. `chibi03` chỉ có 28 bone, ~6 bone ngón (các model khác 30 bone ngón), nên nếu bàn tay thả lỏng dùng ngón thì `chibi03` không chạy được. Khi thiếu bone, `getNormalizedBoneNode` trả `null`, code phải bỏ qua bone đó.
+- **Tay hiện không có dữ liệu tư thế:** `AvatarPose` không có trường nào cho tay; `rotation.z` của cánh tay được ghi đè tuyệt đối mỗi khung (không damp). Cần thêm trường vào `AVATAR_POSES` và `EXPRESSIONS`, và damp để chuyển mượt giữa trạng thái (như cách đầu đang làm).
+- **Trục xoay chưa biết:** hiện chỉ đặt `rotation.z`. Khuỷu và bàn tay xoay quanh trục nào, thứ tự Euler mặc định XYZ ảnh hưởng ra sao, đều chưa thử (4.7.0.2).
+- **Mức miệng chỉ được tính ở cuối `useFrame`**, trong khối `if (em)`. Muốn tay theo mức miệng (4.7.3) phải tính sớm hơn và làm mượt.
+- **Sprite là ảnh tĩnh:** `applyShot` chụp cả 16 ảnh với tư thế `speaking`, không có chuyển động. Tay theo trạng thái (nâng tay khi nghĩ) không xuất hiện ở bậc sprite nếu không chụp riêng.
+- **Va chạm:** 58° hiện tại có thể được chọn để tay không xuyên thân. Hạ tay sát hơn có thể xuyên thân hoặc làm spring bones của tay áo xử lý khác; chỉ nhìn thẳng từ trước thì khó thấy. Cần kiểm tra ở nhiều biểu cảm.
+- **Khung camera:** `frameUpperBody` lấy bề ngang theo khoảng cách hai vai × `ARM_ROOM` (4), nên đổi khuỷu hay bàn tay không làm số này đổi. Khuỷu mở ra hoặc tay nâng lên có thể vượt khung hẹp (điện thoại dọc); phải xem ở cả tỉ lệ dọc và ngang.
+- **Nhịp thở đã làm tay di chuyển:** `chest.rotation.x` xoay theo nhịp thở và tay là con của ngực nên tay đã đung đưa theo. 4.7.2 (thở bằng bone) và 4.8.3 (thở bằng CSS cho cả khung) làm cùng một việc theo hai cách.
+- **Chi tiết:** chuyển động tay cần nhân hệ số `k` khi tắt mic như các chuyển động khác; `idle` và `connecting` cũng cần quy định tư thế tay.
+- **Mốc fps:** "không tốn rõ rệt fps ở bậc nhẹ" cần một con số. Đề xuất so bằng `?avatar-fps` ở bậc nhẹ trước và sau khi sửa, ghi vào mục kết quả.
+
+### Điểm cần quyết trước khi làm 4.7.1 trở đi (đã chốt cả 5 câu, 2026-11-12)
+
+1. ~~**Ngón tay**~~ **Đã chốt (2026-11-12):** làm cổ tay trước (`leftHand`, `rightHand`), ngón tính sau. Chỉ thêm một bộ góc cong ngón cố định nếu trang debug (4.7.0.2) cho thấy bàn tay nằm trong khung và ngón duỗi trông cứng; `chibi03` thiếu bone ngón nên sẽ bỏ qua.
+2. ~~**Sprite**~~ **Đã chốt (2026-11-12):** cách A, cả 16 ảnh dùng một tư thế nghỉ chung. So lại với cách B (3 ảnh `thinking` có tay nâng) sau khi xong 4.7.1 và có trang debug: chụp thử tạm, không ghi đè bộ ảnh hiện có, rồi so bằng mắt. Lưu ý nếu làm B: sprite dùng ảnh `thinking` cả khi bot nói với thẻ biểu cảm `thinking`, còn bản 3D chỉ nâng tay ở trạng thái `thinking`, nên sẽ lệch nhau.
+3. ~~**"Nghĩ" ở 4.7.3**~~ **Đã chốt (2026-11-12):** phương án 1, chỉ trạng thái `thinking` nâng tay (thêm trường tay vào `AVATAR_POSES.thinking`, không đụng `EXPRESSIONS`). Khi bot nói với thẻ biểu cảm `thinking`, tay vẫn theo lời nói. Nếu sau khi xem trên trang debug thấy cứng thì nâng lên phương án 3 (thẻ `thinking` lúc nói nâng khoảng 40%).
+4. ~~**Nhịp thở**~~ **Đã chốt (2026-11-12):** phương án 1, giữ `chest.rotation.x` hiện tại và thêm vai (`leftShoulder`, `rightShoulder`) nhún nhẹ bằng bone, dùng chung `pose.breath`. Thở bằng CSS cho cả khung (4.8.3) để quyết sau, dựa trên số đo ở 4.8.0; chỉ đáng làm nếu muốn bậc sprite cũng có chuyển động thở.
+5. ~~**Tay theo mức miệng**~~ **Đã chốt (2026-11-12):** phương án 2. Lấy mức mở miệng (tổng hoặc max các viseme), làm mượt bằng `damp` chậm hơn miệng (khoảng 3 đến 4), rồi cho khuỷu và cổ tay nhích lên vài độ theo mức đó; không động cánh tay trên (dễ xuyên thân). Phải đưa phép tính miệng lên trước phần tay trong `useFrame` và nhân hệ số `k` khi tắt mic. Giá trị khởi đầu do tôi đặt, chỉnh bằng thanh trượt trên trang debug (4.7.0.2). Phương án 3 (cử chỉ theo nhịp nhấn) để dành nếu sau đó thấy tay còn đơn điệu.
 
 ### Hướng B (để phát triển sau, chưa làm)
 
