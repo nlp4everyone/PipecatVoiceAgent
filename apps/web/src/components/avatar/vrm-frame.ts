@@ -12,13 +12,30 @@ const ARM_ROOM = 4;
 export const ARM_RAD = MathUtils.degToRad(58);
 
 /**
- * Tư thế một tay (góc radian, dùng cho cả hai bên: bên phải được đảo dấu). Hiện chỉ có cánh tay trên;
- * vai, khuỷu và cổ tay sẽ thêm ở 4.7.0.2 sau khi xác định trục xoay của từng bone.
+ * Tư thế một tay (góc radian, dùng cho cả hai bên: bên phải đảo dấu y và z, giữ x).
+ * Trục đo ở 4.7.0.2 (docs/plans/avatar-3d/phase-4.md): z của vai và cánh tay trên là hạ xuống;
+ * y của khuỷu và cổ tay âm là gập ra trước; z của khuỷu dương là đưa vào phía thân.
  */
 export interface ArmPose {
-  /** Hạ cánh tay trên khỏi tư thế chữ T (xoay quanh trục z). */
-  upper: number;
+  /** Vai: dương là hạ vai, âm là nhún lên (trục z). */
+  shoulderZ: number;
+  /** Hạ cánh tay trên khỏi tư thế chữ T (trục z). */
+  upperZ: number;
+  /** Khuỷu gập ra trước (y, âm là gập) và đưa vào thân (z, dương). */
+  lowerY: number;
+  lowerZ: number;
+  /** Cổ tay gập ra trước (y, âm là gập). */
+  handY: number;
 }
+
+/** Tư thế nghỉ (4.7.1): hạ tay bằng cả vai và cánh tay, gập nhẹ khuỷu, cổ tay thả lỏng. Giá trị khởi đầu, chỉnh bằng mắt. */
+export const REST_ARM: ArmPose = {
+  shoulderZ: MathUtils.degToRad(6),
+  upperZ: MathUtils.degToRad(55),
+  lowerY: MathUtils.degToRad(-8),
+  lowerZ: MathUtils.degToRad(3),
+  handY: MathUtils.degToRad(-3),
+};
 
 /**
  * Đặt tư thế hai tay. Dùng chung cho avatar 3D và cho việc chụp sprite để hai bên khớp nhau.
@@ -26,10 +43,18 @@ export interface ArmPose {
  */
 export function applyArmPose(vrm: VRM, arm: ArmPose) {
   const h = vrm.humanoid;
-  const left = h.getNormalizedBoneNode("leftUpperArm");
-  const right = h.getNormalizedBoneNode("rightUpperArm");
-  if (left) left.rotation.z = arm.upper;
-  if (right) right.rotation.z = -arm.upper;
+  const set = (side: "left" | "right", sign: 1 | -1) => {
+    const shoulder = h.getNormalizedBoneNode(`${side}Shoulder`);
+    const upper = h.getNormalizedBoneNode(`${side}UpperArm`);
+    const lower = h.getNormalizedBoneNode(`${side}LowerArm`);
+    const hand = h.getNormalizedBoneNode(`${side}Hand`);
+    if (shoulder) shoulder.rotation.z = sign * arm.shoulderZ;
+    if (upper) upper.rotation.z = sign * arm.upperZ;
+    if (lower) lower.rotation.set(0, sign * arm.lowerY, sign * arm.lowerZ);
+    if (hand) hand.rotation.set(0, sign * arm.handY, 0);
+  };
+  set("left", 1);
+  set("right", -1);
 }
 
 /** Chuẩn bị model một lần: bỏ đỉnh thừa, quay VRM 0.x về hướng +z, tắt frustum culling. */
