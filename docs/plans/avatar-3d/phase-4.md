@@ -481,6 +481,37 @@ tốn rõ rệt fps ở bậc nhẹ; khung camera không cắt tay; sprite khớ
 4. ~~**Nhịp thở**~~ **Đã chốt (2026-11-12):** phương án 1, giữ `chest.rotation.x` hiện tại và thêm vai (`leftShoulder`, `rightShoulder`) nhún nhẹ bằng bone, dùng chung `pose.breath`. Thở bằng CSS cho cả khung (4.8.3) để quyết sau, dựa trên số đo ở 4.8.0; chỉ đáng làm nếu muốn bậc sprite cũng có chuyển động thở.
 5. ~~**Tay theo mức miệng**~~ **Đã chốt (2026-11-12):** phương án 2. Lấy mức mở miệng (tổng hoặc max các viseme), làm mượt bằng `damp` chậm hơn miệng (khoảng 3 đến 4), rồi cho khuỷu và cổ tay nhích lên vài độ theo mức đó; không động cánh tay trên (dễ xuyên thân). Phải đưa phép tính miệng lên trước phần tay trong `useFrame` và nhân hệ số `k` khi tắt mic. Giá trị khởi đầu do tôi đặt, chỉnh bằng thanh trượt trên trang debug (4.7.0.2). Phương án 3 (cử chỉ theo nhịp nhấn) để dành nếu sau đó thấy tay còn đơn điệu.
 
+### Kết quả bước 4.7.0.2 (trang debug và trục xoay)
+
+Trang `/?avatar-pose` (`components/avatar/pose-test.tsx`, đăng ký ở `main.tsx`): ba thanh trượt x/y/z (độ) cho vai, cánh tay trên, khuỷu và cổ tay; ô "Đối xứng bên phải", ô "Hiện trục" (AxesHelper gắn vào bone), chọn thứ tự Euler, ba góc nhìn (front/side/top) và OrbitControls. Ô cuối panel hiện chuỗi URL của tư thế hiện tại để dán lại. Tham số URL: `shoulder`, `upper`, `lower`, `hand` (dạng `x,y,z`), `order`, `mirror=0`, `axes=1`, `view`, `cam`, `target`. Trang đặt thẳng `rotation` của bone, không qua `applyArmPose`.
+
+Trục xoay **đo bằng số** (không chỉ nhìn): trên `AvatarSample_E.web.vrm`, tay hạ 58°, đặt +60° quanh từng trục rồi tính hướng từ bone đến bone con trong toạ độ thế giới. Mặt trước của model là +z (camera ở +z thấy mặt), bên trái của model ở +x. Thứ tự Euler là XYZ, mỗi lần chỉ xoay một trục.
+
+| Trục | Ý nghĩa (bên trái; bên phải dùng cùng giá trị khi bật "Đối xứng") | Kết quả đo |
+|---|---|---|
+| x | Xoay dọc theo bone (vặn cẳng tay hoặc cổ tay), **không gập** | Hướng bone con gần như không đổi (cẳng tay (0,53; -0,85; 0,08) thành (0,59; -0,81; 0,04)) |
+| y | Vung theo chiều trước/sau. **+y là ra sau, −y là ra trước** | Cẳng tay +60° thành (0,30; -0,48; **-0,82**) |
+| z | Vung trong mặt phẳng nhìn từ trước. Cánh tay trên: +z hạ xuống. Khuỷu và cổ tay: +z đưa vào phía thân. Vai: +z hạ vai, −z nhún lên | Cẳng tay +60° thành (-0,47; -0,88; 0,08) |
+
+Hệ quả cho 4.7.1 đến 4.7.3:
+- **Gập khuỷu về phía trước là `lower.y` âm**, không phải `x` hay `z`. Cổ tay gập về phía trước cũng là `hand.y` âm.
+- Cách đối xứng "đảo dấu y và z bên phải, giữ x" (đang dùng cho `ARM_RAD`) đã được xác nhận: bên phải ra cùng hướng trước/sau và cùng độ hạ như bên trái.
+- Nâng cẳng tay lên (tay nghĩ) là `lower.y` âm lớn hơn; đưa tay vào gần thân là `lower.z` dương.
+- Nhún vai lên là `shoulder.z` âm; nhờ đối xứng nên cả hai vai cùng nhún.
+
+**Các model khác (đã đo 2026-11-12, `?model=/avatars/X.vrm`, cùng phép đo như trên):** `AvatarSample_E.web`, `AvatarSample_D`, `Mocking_Spit_Strawberry` và `chibi03` cho cùng dấu và cùng ý nghĩa của ba trục (x vặn, +y ra sau, +z của khuỷu đưa vào thân). Vậy bảng trục dùng chung được. Hai chỗ lệch nhỏ:
+- Hướng nghỉ của cánh tay trên khác nhau vài độ: với cùng `upper.z = 58°`, cánh tay lệch khỏi phương thẳng đứng khoảng 29° (`AvatarSample_E`, `D`), 37° (`Mocking_Spit_Strawberry`), 24° (`chibi03`). Giá trị chỉnh trên `AvatarSample_E` sẽ hơi lệch trên model khác; chấp nhận được, hoặc bù theo model nếu muốn.
+- `chibi03` không có bone ngón nên không đo được trục của cổ tay (`hand`); bone `leftHand` vẫn có.
+
+**Thứ tự Euler (đo cùng ngày, 4 tư thế × 5 thứ tự so với `XYZ`, độ lệch vị trí cổ tay tính bằng cm trên `AvatarSample_E`):**
+- Tư thế chỉ xoay **một trục cho mỗi bone** (ví dụ `upper.z`, `lower.y`, `hand.y`): mọi thứ tự cho kết quả giống hệt (0 cm).
+- Khi một bone xoay **từ hai trục trở lên** (ví dụ cánh tay trên `y` và `z`): thứ tự có ảnh hưởng, lệch từ 2,5 đến 15 cm ở cổ tay so với `XYZ` (cánh tay dài khoảng 60 cm), tuỳ thứ tự và tư thế. `YXZ` và `YZX` gần `XYZ` hơn `ZXY` và `ZYX`, nhưng không trùng.
+- Kết luận: **giữ `XYZ` (mặc định của three, đang dùng cho `ARM_RAD`)** và tránh để một bone xoay nhiều trục cùng lúc khi không cần. Giá trị chỉnh trên trang debug phụ thuộc thứ tự Euler đang chọn, nên đổi thứ tự sau khi chỉnh sẽ làm tư thế lệch; ghi thứ tự cùng giá trị.
+
+Chưa kiểm tra:
+- Hình dạng có xuyên thân hay không ở các tư thế thật (mới chụp thử vài ảnh để xem trang chạy); nên làm sau 4.7.1, khi đã có tư thế nghỉ.
+- Chưa kiểm tra trên điện thoại.
+
 ### Hướng B (để phát triển sau, chưa làm)
 
 Dùng clip Mixamo (idle, nói chuyện, nghĩ) retarget sang VRM bằng `@pixiv/three-vrm-animation`,
