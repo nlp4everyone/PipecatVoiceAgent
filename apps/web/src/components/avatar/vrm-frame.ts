@@ -14,7 +14,8 @@ export const ARM_RAD = MathUtils.degToRad(58);
 /**
  * Tư thế một tay (góc radian, dùng cho cả hai bên: bên phải đảo dấu y và z, giữ x).
  * Trục đo ở 4.7.0.2 (docs/plans/avatar-3d/phase-4.md): z của vai và cánh tay trên là hạ xuống;
- * y của khuỷu và cổ tay âm là gập ra trước; z của khuỷu dương là đưa vào phía thân.
+ * y của khuỷu và cổ tay âm là gập ra trước; z của khuỷu dương là đưa vào phía thân; z của ngón dương là cong về lòng bàn tay
+ * (đo ở 4.7.1.1).
  */
 export interface ArmPose {
   /** Vai: dương là hạ vai, âm là nhún lên (trục z). */
@@ -26,7 +27,14 @@ export interface ArmPose {
   lowerZ: number;
   /** Cổ tay gập ra trước (y, âm là gập). */
   handY: number;
+  /** Ngón cong về phía lòng bàn tay (z dương) ở đốt gần, đốt giữa, đốt xa của bốn ngón dài, và ngón cái. */
+  fingerProximal: number;
+  fingerIntermediate: number;
+  fingerDistal: number;
+  thumb: number;
 }
+
+const FINGERS = ["Index", "Middle", "Ring", "Little"] as const;
 
 /** Tư thế nghỉ (4.7.1): hạ tay bằng cả vai và cánh tay, gập nhẹ khuỷu, cổ tay thả lỏng. Giá trị khởi đầu, chỉnh bằng mắt. */
 export const REST_ARM: ArmPose = {
@@ -35,6 +43,11 @@ export const REST_ARM: ArmPose = {
   lowerY: MathUtils.degToRad(-8),
   lowerZ: MathUtils.degToRad(3),
   handY: MathUtils.degToRad(-3),
+  // Giá trị khởi đầu (4.7.1.1), chỉnh bằng mắt trên trang debug.
+  fingerProximal: MathUtils.degToRad(15),
+  fingerIntermediate: MathUtils.degToRad(20),
+  fingerDistal: MathUtils.degToRad(10),
+  thumb: MathUtils.degToRad(8),
 };
 
 /**
@@ -52,6 +65,16 @@ export function applyArmPose(vrm: VRM, arm: ArmPose) {
     if (upper) upper.rotation.z = sign * arm.upperZ;
     if (lower) lower.rotation.set(0, sign * arm.lowerY, sign * arm.lowerZ);
     if (hand) hand.rotation.set(0, sign * arm.handY, 0);
+    for (const f of FINGERS) {
+      const prox = h.getNormalizedBoneNode(`${side}${f}Proximal`);
+      const mid = h.getNormalizedBoneNode(`${side}${f}Intermediate`);
+      const dist = h.getNormalizedBoneNode(`${side}${f}Distal`);
+      if (prox) prox.rotation.z = sign * arm.fingerProximal;
+      if (mid) mid.rotation.z = sign * arm.fingerIntermediate;
+      if (dist) dist.rotation.z = sign * arm.fingerDistal;
+    }
+    const thumbProx = h.getNormalizedBoneNode(`${side}ThumbProximal`);
+    if (thumbProx) thumbProx.rotation.z = sign * arm.thumb;
   };
   set("left", 1);
   set("right", -1);

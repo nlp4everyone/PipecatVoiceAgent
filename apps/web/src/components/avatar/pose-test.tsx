@@ -40,6 +40,11 @@ const GROUPS = [
 type GroupKey = (typeof GROUPS)[number]["key"];
 type Vec = [number, number, number];
 type Values = Record<GroupKey, Vec>;
+/** Độ cong z của ngón (4.7.1.1): đốt gần, đốt giữa, đốt xa của bốn ngón dài, và ngón cái. */
+type Fingers = [number, number, number, number];
+const FINGER_LABELS = ["Đốt gần", "Đốt giữa", "Đốt xa", "Ngón cái"] as const;
+const FINGER_BONES = ["Index", "Middle", "Ring", "Little"] as const;
+const FINGER_DEFAULTS: Fingers = [0, 0, 0, 0];
 
 const ORDERS = ["XYZ", "XZY", "YXZ", "YZX", "ZXY", "ZYX"] as const;
 type Order = (typeof ORDERS)[number];
@@ -60,6 +65,7 @@ const DEFAULTS: Values = {
 
 interface Config {
   values: Values;
+  fingers: Fingers;
   order: Order;
   mirror: boolean;
   axes: boolean;
@@ -78,8 +84,11 @@ function initial() {
   for (const g of GROUPS) values[g.key] = readVec(params, g.key) ?? DEFAULTS[g.key];
   const order = (ORDERS as readonly string[]).includes(params.get("order") ?? "") ? (params.get("order") as Order) : "XYZ";
   const view = (params.get("view") ?? "front") as ViewKey;
+  const rawFingers = params.get("finger")?.split(",").map(Number);
+  const fingers = rawFingers?.length === 4 && rawFingers.every(Number.isFinite) ? (rawFingers as Fingers) : FINGER_DEFAULTS;
   return {
     values,
+    fingers,
     order,
     mirror: params.get("mirror") !== "0",
     axes: params.get("axes") === "1",
@@ -92,6 +101,7 @@ function initial() {
 export function PoseTest() {
   const start = useMemo(initial, []);
   const [values, setValues] = useState<Values>(start.values);
+  const [fingers, setFingers] = useState<Fingers>(start.fingers);
   const [order, setOrder] = useState<Order>(start.order);
   const [mirror, setMirror] = useState(start.mirror);
   const [axes, setAxes] = useState(start.axes);
@@ -99,7 +109,7 @@ export function PoseTest() {
   const [custom, setCustom] = useState<{ cam: Vec; target: Vec } | null>(
     start.cam && start.target ? { cam: start.cam, target: start.target } : null,
   );
-  const config: Config = { values, order, mirror, axes };
+  const config: Config = { values, fingers, order, mirror, axes };
   const shot = custom ?? VIEWS[view];
 
   const set = (key: GroupKey, i: number, v: number) =>
@@ -109,10 +119,11 @@ export function PoseTest() {
   const query = useMemo(() => {
     const p = new URLSearchParams({ "avatar-pose": "" });
     for (const g of GROUPS) p.set(g.key, values[g.key].join(","));
+    p.set("finger", fingers.join(","));
     p.set("order", order);
     if (!mirror) p.set("mirror", "0");
     return "?" + p.toString().replace("avatar-pose=", "avatar-pose").replaceAll("%2C", ",");
-  }, [values, order, mirror]);
+  }, [values, fingers, order, mirror]);
 
   return (
     <div className="relative h-dvh bg-background text-foreground">
@@ -189,8 +200,33 @@ export function PoseTest() {
           </fieldset>
         ))}
 
+        <fieldset className="flex flex-col gap-1">
+          <legend className="mb-1 font-medium">Ngón (z, cong về lòng bàn tay)</legend>
+          {FINGER_LABELS.map((label, i) => (
+            <label key={label} className="flex items-center gap-2">
+              <span className="w-14 text-muted-foreground">{label}</span>
+              <input
+                className="min-w-0 flex-1"
+                type="range"
+                min={-30}
+                max={90}
+                step={1}
+                value={fingers[i]}
+                onChange={(e) => setFingers((cur) => cur.map((x, j) => (j === i ? Number(e.target.value) : x)) as Fingers)}
+              />
+              <span className="w-9 text-right font-mono">{fingers[i]}°</span>
+            </label>
+          ))}
+        </fieldset>
+
         <div className="flex items-center gap-2">
-          <Pill active={false} onClick={() => setValues(DEFAULTS)}>
+          <Pill
+            active={false}
+            onClick={() => {
+              setValues(DEFAULTS);
+              setFingers(FINGER_DEFAULTS);
+            }}
+          >
             Đặt lại
           </Pill>
           <Pill
@@ -283,6 +319,19 @@ function PoseAvatar({ config }: { config: Config }) {
         const [x, y, z] = values[g.key];
         node.rotation.set(MathUtils.degToRad(x), MathUtils.degToRad(y * sign), MathUtils.degToRad(z * sign), order);
       }
+    }
+    const { fingers: f, mirror: mir } = configRef.current;
+    for (const side of ["left", "right"] as const) {
+      const sign = side === "right" && mir ? -1 : 1;
+      const z = (deg: number) => MathUtils.degToRad(deg * sign);
+      for (const name of FINGER_BONES) {
+        (["Proximal", "Intermediate", "Distal"] as const).forEach((seg, i) => {
+          const node = vrm.humanoid.getNormalizedBoneNode(`${side}${name}${seg}` as "leftIndexProximal");
+          if (node) node.rotation.set(0, 0, z(f[i]));
+        });
+      }
+      const thumb = vrm.humanoid.getNormalizedBoneNode(`${side}ThumbProximal` as "leftThumbProximal");
+      if (thumb) thumb.rotation.set(0, 0, z(f[3]));
     }
     vrm.update(dt);
   });
