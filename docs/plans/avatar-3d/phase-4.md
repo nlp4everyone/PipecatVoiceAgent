@@ -451,6 +451,7 @@ hưởng luôn qua WebView.
 | 4.7.0.1 | Tách đoạn đặt tư thế tay thành một hàm dùng chung (ví dụ `applyArmPose` trong `vrm-frame.ts`) cho `avatar-stage.tsx` và `sprite-capture.tsx`; thêm trường tay vào `AvatarPose` | Hiện hai nơi chép tay cùng đoạn `ARM_RAD`, thêm vai/khuỷu/bàn tay vào cả hai sẽ lệch nhau |
 | 4.7.0.2 | Trang debug (ví dụ `/?avatar-pose`) có thanh trượt cho từng góc, và xác định trục xoay của khuỷu/bàn tay/vai trong không gian normalized của VRM 0.x (kể cả thứ tự Euler) | Để "chỉnh bằng mắt" ở 4.7.1 không phải sửa code rồi nạp lại; trục xoay chưa ai thử |
 | 4.7.1 | Tư thế nghỉ: hạ tay khỏi chữ T bằng cả vai và cánh tay, gập nhẹ khuỷu, bàn tay thả lỏng | Thay cho một góc `ARM_RAD` duy nhất. Giá trị chỉnh bằng mắt |
+| 4.7.1.1 | Bàn tay cong nhẹ: thêm bộ góc cong cố định cho các bone ngón vào `REST_ARM` | Làm theo điều kiện ở câu 1 (ngón duỗi trông cứng, đã được xác nhận khi xem 4.7.1). Cần đo trục ngón trên các model có ngón, thêm thanh trượt ngón vào trang debug, chỉnh bằng mắt; `chibi03` thiếu bone ngón thì bỏ qua; đo lại fps bằng `?avatar-fps` |
 | 4.7.2 | Nhịp thở: vai nhún nhẹ, tay đung đưa rất nhỏ theo nhịp | Dùng chung bộ định thời với chuyển động nhàn rỗi |
 | 4.7.3 | Theo trạng thái: nói thì tay cử động nhẹ theo mức miệng, nghĩ thì nâng tay hơi gập, nghe thì tay yên | Trạng thái lấy từ `use-avatar-state.ts`, chuyển mượt bằng `damp` sẵn có |
 | 4.7.4 | Cập nhật khung camera và chụp lại sprite | Tư thế tay đổi thì `vrm-frame.ts` (bề ngang vai và tay) phải kiểm tra lại, và 16 ảnh sprite phải chụp lại bằng `node tools/capture-sprites.mjs` để khớp bản 3D |
@@ -511,6 +512,26 @@ Hệ quả cho 4.7.1 đến 4.7.3:
 Chưa kiểm tra:
 - Hình dạng có xuyên thân hay không ở các tư thế thật (mới chụp thử vài ảnh để xem trang chạy); nên làm sau 4.7.1, khi đã có tư thế nghỉ.
 - Chưa kiểm tra trên điện thoại.
+
+### Kết quả bước 4.7.1 (tư thế nghỉ)
+
+`REST_ARM` (`vrm-frame.ts`) dùng chung cho mọi trạng thái, avatar 3D và `sprite-capture.tsx`. `ArmPose` đổi từ một trường `upper` sang `shoulderZ`, `upperZ`, `lowerY`, `lowerZ`, `handY`; `applyArmPose` đặt vai, cánh tay trên, khuỷu và cổ tay, bên phải đảo dấu y và z. Giá trị cuối (độ), chỉnh sau khi xem trên trang debug:
+
+| Bone | Góc |
+|---|---|
+| Vai | `z` 6 |
+| Cánh tay trên | `z` 55 (tổng với vai 61, hơn 58 cũ) |
+| Khuỷu | `y` -8, `z` 3 |
+| Cổ tay | `y` -3 |
+
+Giá trị đầu tiên (khuỷu `y` -18, cổ tay `y` -8) bị thấy là đưa tay ra trước quá nhiều cho tư thế nghỉ nên đã giảm. Xem trên trang debug (`/?avatar-pose`, thứ tự Euler `XYZ`): không thấy xuyên thân, đánh giá ổn.
+
+Chưa kiểm tra:
+- Xuyên thân ở các biểu cảm khác nhau trên bản 3D thật.
+- Điện thoại.
+- Model khác ngoài lần xem trên trang debug (hướng nghỉ cánh tay trên lệch vài độ giữa các model).
+- fps (mốc `?avatar-fps` ở bậc nhẹ, trước và sau).
+- Ngón vẫn thẳng, xử lý ở 4.7.1.1. Sprite chưa chụp lại (4.7.4).
 
 ### Hướng B (để phát triển sau, chưa làm)
 
