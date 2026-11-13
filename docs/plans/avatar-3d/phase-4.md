@@ -533,6 +533,14 @@ Chưa kiểm tra:
 - fps (mốc `?avatar-fps` ở bậc nhẹ, trước và sau).
 - Ngón vẫn thẳng, xử lý ở 4.7.1.1. Sprite chưa chụp lại (4.7.4).
 
+### Kết quả bước 4.7.1.1 (ngón cong nhẹ)
+
+Trục ngón đo cùng cách với 4.7.0.2 (tay hạ 55°, đặt +0,6 rad từng trục, tính hướng bone đến bone con): trên `AvatarSample_E`, `AvatarSample_D`, `Mocking_Spit_Strawberry` và `chibi03` cho cùng kết quả. Bên trái, **`z` dương cong ngón về phía lòng bàn tay**, `y` vung ngón ra sau, `x` vặn dọc bone (không dùng). Bên phải đảo dấu z (đo trên `Mocking_Spit_Strawberry`: +z làm ngón mở ra xa thân), đúng quy ước của `applyArmPose`. `chibi03` chỉ có bone ngón trỏ nên chỉ đo được ngón đó.
+
+`ArmPose` thêm `fingerProximal`, `fingerIntermediate`, `fingerDistal` (áp cho bốn ngón dài) và `thumb` (ngón cái, chỉ `ThumbProximal`). Giá trị trong `REST_ARM` (độ): 15, 20, 10, 8; xem trên trang debug (thanh trượt "Ngón", tham số URL `finger=gần,giữa,xa,cái`) và đánh giá là ổn.
+
+Chưa làm: đo fps bằng `?avatar-fps` (thêm khoảng 13 bone mỗi tay mỗi khung), xem trên điện thoại, chụp lại sprite (4.7.4).
+
 ### Hướng B (để phát triển sau, chưa làm)
 
 Dùng clip Mixamo (idle, nói chuyện, nghĩ) retarget sang VRM bằng `@pixiv/three-vrm-animation`,
