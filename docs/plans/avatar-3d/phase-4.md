@@ -589,6 +589,15 @@ Tư thế hai tay đối xứng ở má bị thấy giống ngạc nhiên hơn �
 
 **Chưa kiểm tra:** iPhone; model khác (`Mocking_Spit_Strawberry`, `chibi03`, đặc biệt `chibi03` thiếu bone ngón); fps (thêm một cặp `damp` cho tay phải và vài bone ngón cái, rủi ro thấp); bậc nhẹ 20 fps.
 
+### Kết quả bước 4.7.3b (tay theo mức miệng khi nói)
+
+- **Cách làm:** `avatar-stage.tsx` gọi `sampleMouth` một lần mỗi khung ở đầu `useFrame` (phần lip-sync phía dưới dùng lại cùng giá trị), lấy mức mở lớn nhất của các viseme, làm mượt bằng `damp` (`TALK_DAMP` = 3,5, chậm hơn miệng), nhân `pose.talk` và hệ số `k` (tắt mic thì nhẹ đi một nửa), rồi truyền vào `applyArmPose(..., talk)`: khuỷu gập thêm `talk`, cổ tay gập thêm `talk` nhân `TALK_HAND_RATIO` (0,6), cả hai bên; cánh tay trên không đổi. `AvatarPose.talk` là 8° ở `speaking` và 0 ở các trạng thái khác nên `listening`, `thinking`, `idle`, `connecting` không nhích theo miệng.
+- **`?mouth=sim`:** thay mức miệng thật bằng sóng giả (âm tiết khoảng 2,5 lần mỗi giây, ngắt quãng theo câu) để thử khi không có bot, vì trang `/?avatar-expression` không có track. Chỉ dùng khi debug.
+- **Biên độ:** 5° không thấy rõ, 8° được đánh giá ổn khi xem bằng `?mouth=sim`. Giá trị khởi đầu, chỉnh bằng mắt.
+- **Đã kiểm tra bằng máy:** trang `?avatar-expression&mouth=sim&avatar-fps` chạy không lỗi runtime, 30/30 fps (desktop, Chrome headless); 6 ảnh cách nhau 0,23 giây cho thấy miệng mở và khép theo sóng giả.
+- **Chưa kiểm tra:** với bot thật (sóng giả đều, lời nói thật ngắt quãng) và lip-sync với track thật sau khi dời `sampleMouth` lên trước; tắt mic trên bản gọi thật; chuyển trạng thái trong lúc nói (từ `thinking` sang `speaking`, và thẻ biểu cảm `thinking` khi bot nói); `Mocking_Spit_Strawberry` và `chibi03`; xuyên áo hoặc spring bones khi khuỷu gập thêm; fps trên iPhone ở 20 fps (nhích vài độ có thể thành nhảy từng nấc) và `fps=0`; fps desktop (chỉ thêm vài phép tính mỗi khung, rủi ro thấp).
+- **Cánh tay còn cứng không:** đánh giá lại sau khi thử với bot thật; nếu vẫn cứng thì xét hướng B.
+
 ### Hướng B (để phát triển sau, chưa làm)
 
 Dùng clip Mixamo (idle, nói chuyện, nghĩ) retarget sang VRM bằng `@pixiv/three-vrm-animation`,

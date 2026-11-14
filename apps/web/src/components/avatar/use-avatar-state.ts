@@ -20,6 +20,8 @@ export interface AvatarPose {
   sway: number;
   /** Nhịp thở: biên độ (rad) và tần số (rad/giây). */
   breath: { amp: number; speed: number };
+  /** Biên độ (rad) khuỷu nhích lên theo mức miệng khi nói (4.7.3b). 0 là tay yên. */
+  talk: number;
   /** Tư thế hai tay (và tay trái nếu có `armRight`). */
   arm: ArmPose;
   /** Tư thế riêng của tay phải để làm cử chỉ một tay; không có thì hai tay đối xứng theo `arm`. */
@@ -62,6 +64,7 @@ const BASE: AvatarPose = {
   followPointer: false,
   nod: { amp: 0, hz: 0 },
   sway: 0,
+  talk: 0,
   breath: { amp: 0.015, speed: 1.6 },
   arm: REST_ARM,
   emotion: {},
@@ -80,7 +83,7 @@ export const AVATAR_POSES: Record<OrbState, AvatarPose> = {
     breath: { amp: 0.01, speed: 1.2 },
     armRight: THINKING_ARM_RIGHT,
   },
-  speaking: { ...BASE, sway: 0.03, nod: { amp: 0.025, hz: 0.6 }, emotion: { happy: 0.25 } },
+  speaking: { ...BASE, sway: 0.03, talk: deg(8), nod: { amp: 0.025, hz: 0.6 }, emotion: { happy: 0.25 } },
 };
 
 /** Thẻ biểu cảm bot gửi qua RTVI (`avatar-expression`); khớp `EXPRESSION_TAGS` ở backend. */

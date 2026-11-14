@@ -30,6 +30,8 @@ import { applyArmPose, type ArmPose, AVATAR_URL, dampArm, frameUpperBody, prepar
  * Hai tầng cùng giá trị 5 cho khoảng 0,8 giây đến gần đích.
  */
 const ARM_DAMP = 5;
+/** Độ nhanh làm mượt mức miệng dùng cho tay (chậm hơn miệng, 4.7.3b). */
+const TALK_DAMP = 3.5;
 const EMOTIONS = ["happy", "relaxed", "sad", "surprised"] as const;
 interface AvatarStageProps {
   state: OrbState;
@@ -214,6 +216,11 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
   const armGoal = useRef<ArmPose>({ ...REST_ARM });
   const armRight = useRef<ArmPose>({ ...REST_ARM });
   const armRightGoal = useRef<ArmPose>({ ...REST_ARM });
+  const talkLevel = useRef(0);
+  // `?mouth=sim`: mức miệng giả để thử tay theo miệng khi không có bot (trang thử không có track).
+  const simMouth = useRef<Record<(typeof VISEMES)[number], number> | null>(
+    new URLSearchParams(location.search).get("mouth") === "sim" ? { aa: 0, ih: 0, ou: 0, ee: 0, oh: 0 } : null,
+  );
   const cam = useRef({ y: 0, z: 0 });
 
   // Chuẩn bị model một lần rồi đặt camera nửa người trên.
@@ -253,13 +260,26 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
     const h = vrm.humanoid;
     const k = muted ? 0.5 : 1; // mic tắt thì mọi chuyển động nhẹ đi
 
+    // Mức miệng tính trước tay, một lần mỗi khung: tay nhích theo mức mở lớn nhất của các hình miệng, làm mượt chậm.
+    let mouth = sampleMouth(dt);
+    if (simMouth.current) {
+      // Giả giọng nói: âm tiết ~2,5 lần mỗi giây, ngắt quãng theo câu.
+      const sim = simMouth.current;
+      sim.aa = Math.max(0, Math.sin(t * 16)) * (Math.sin(t * 0.9) > -0.3 ? 0.8 : 0);
+      mouth = sim;
+    }
+    let open = 0;
+    for (const v of VISEMES) open = Math.max(open, mouth[v]);
+    talkLevel.current = MathUtils.damp(talkLevel.current, open, TALK_DAMP, dt);
+    const talk = talkLevel.current * pose.talk * k;
+
     // Tay hạ xuống; ngực thở và vai nhún cùng pha, lắc nhẹ khi nói.
     const breath = Math.sin(t * pose.breath.speed) * pose.breath.amp * k;
     dampArm(armGoal.current, pose.arm, ARM_DAMP, dt);
     dampArm(arm.current, armGoal.current, ARM_DAMP, dt);
     dampArm(armRightGoal.current, pose.armRight ?? pose.arm, ARM_DAMP, dt);
     dampArm(armRight.current, armRightGoal.current, ARM_DAMP, dt);
-    applyArmPose(vrm, arm.current, breath * SHOULDER_BREATH_GAIN, armRight.current);
+    applyArmPose(vrm, arm.current, breath * SHOULDER_BREATH_GAIN, armRight.current, talk);
     const chest = h.getNormalizedBoneNode("chest") ?? h.getNormalizedBoneNode("spine");
     if (chest) {
       chest.rotation.x = breath;
@@ -301,7 +321,6 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
         const target = muted ? 0 : (pose.emotion[n] ?? 0);
         em.setValue(n, MathUtils.damp(em.getValue(n) ?? 0, target, 6, dt));
       }
-      const mouth = sampleMouth(dt);
       const openScale = MathUtils.clamp(
         1 - MOUTH_JOY_OVERLAP * (em.getValue("happy") ?? 0) + MOUTH_SORROW_OVERLAP * (em.getValue("sad") ?? 0),
         0.3,

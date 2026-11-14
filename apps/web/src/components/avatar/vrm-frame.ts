@@ -8,6 +8,8 @@ export const AVATAR_URL = (import.meta.env.VITE_AVATAR_URL as string | undefined
 // Phần chiều cao model hiện trong khung (từ đỉnh đầu xuống), và hệ số bề ngang so với khoảng cách hai vai.
 const UPPER_BODY = 0.62;
 const ARM_ROOM = 4;
+/** Cổ tay gập thêm bao nhiêu lần so với khuỷu khi tay nhích theo miệng (4.7.3b); giá trị khởi đầu, chỉnh bằng mắt. */
+const TALK_HAND_RATIO = 0.6;
 /** Biên độ nhún vai so với biên độ ngực (`pose.breath.amp`); giá trị khởi đầu, chỉnh bằng mắt (4.7.2). */
 export const SHOULDER_BREATH_GAIN = 6;
 /** Góc hạ tay khỏi tư thế chữ T (radian). */
@@ -72,11 +74,12 @@ export function dampArm(cur: ArmPose, target: ArmPose, lambda: number, dt: numbe
 
 /**
  * Đặt tư thế hai tay. Dùng chung cho avatar 3D và cho việc chụp sprite để hai bên khớp nhau.
+ * `talk` (radian, dương là nhích lên) gập thêm khuỷu và cổ tay hai bên theo mức miệng khi nói (4.7.3b); không đụng cánh tay trên.
  * `armRight` là tư thế riêng của tay phải (mặc định bằng `arm`, tức đối xứng), dùng cho cử chỉ một tay (4.7.3a.1).
  * `shrug` (radian, dương là nhún vai lên) cộng thêm vào góc vai để làm nhịp thở (4.7.2), cánh tay trên bù ngược lại để tay không đung đưa; sprite không truyền nên là 0.
  * Bone nào model không có thì bỏ qua.
  */
-export function applyArmPose(vrm: VRM, arm: ArmPose, shrug = 0, armRight: ArmPose = arm) {
+export function applyArmPose(vrm: VRM, arm: ArmPose, shrug = 0, armRight: ArmPose = arm, talk = 0) {
   const h = vrm.humanoid;
   const set = (side: "left" | "right", sign: 1 | -1, arm: ArmPose) => {
     const shoulder = h.getNormalizedBoneNode(`${side}Shoulder`);
@@ -86,8 +89,8 @@ export function applyArmPose(vrm: VRM, arm: ArmPose, shrug = 0, armRight: ArmPos
     if (shoulder) shoulder.rotation.z = sign * (arm.shoulderZ - shrug);
     // Cánh tay trên bù đúng phần vai nhún để tổng góc không đổi: tay giữ hướng, chỉ gốc tay nhích lên (nếu không tay quét ngang như con lắc).
     if (upper) upper.rotation.set(arm.upperX, 0, sign * (arm.upperZ + shrug));
-    if (lower) lower.rotation.set(0, sign * arm.lowerY, sign * arm.lowerZ);
-    if (hand) hand.rotation.set(0, sign * arm.handY, 0);
+    if (lower) lower.rotation.set(0, sign * (arm.lowerY - talk), sign * arm.lowerZ);
+    if (hand) hand.rotation.set(0, sign * (arm.handY - talk * TALK_HAND_RATIO), 0);
     for (const f of FINGERS) {
       const prox = h.getNormalizedBoneNode(`${side}${f}Proximal`);
       const mid = h.getNormalizedBoneNode(`${side}${f}Intermediate`);
