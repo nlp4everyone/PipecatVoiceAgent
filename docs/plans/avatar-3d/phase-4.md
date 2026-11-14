@@ -539,7 +539,18 @@ Trục ngón đo cùng cách với 4.7.0.2 (tay hạ 55°, đặt +0,6 rad từn
 
 `ArmPose` thêm `fingerProximal`, `fingerIntermediate`, `fingerDistal` (áp cho bốn ngón dài) và `thumb` (ngón cái, chỉ `ThumbProximal`). Giá trị trong `REST_ARM` (độ): 15, 20, 10, 8; xem trên trang debug (thanh trượt "Ngón", tham số URL `finger=gần,giữa,xa,cái`) và đánh giá là ổn.
 
-Chưa làm: đo fps bằng `?avatar-fps` (thêm khoảng 13 bone mỗi tay mỗi khung), xem trên điện thoại, chụp lại sprite (4.7.4).
+**fps (đo 2026-11-14):** Chrome 151 headless trên máy này, WebGL phần mềm (SwiftShader), bỏ giới hạn nhịp khung (`--disable-frame-rate-limit --disable-gpu-vsync`), trang `/?avatar-expression&avatar-fps&fps=0` (bậc đầy đủ, không giới hạn fps), bỏ 8 giây đầu cho model nạp. So bản trước 4.7.1.1 (`b92b394`) với bản sau (`fbe1807`), build riêng, chạy xen kẽ.
+
+| Bản | Số lần chạy (mỗi lần 30 mẫu 1 giây) | Trung vị fps | Mẫu tụt dưới 80 fps |
+|---|---|---|---|
+| Trước (`b92b394`) | 3 | 102, 103, 102 | 3, 2, 3 |
+| Sau (`fbe1807`) | 3 | 101, 102, 102 | 4, 3, 2 |
+
+Trung vị chênh không quá 1 fps, số mẫu tụt giống nhau (mẫu tụt xuất hiện ở cả hai bản, nên là nhiễu của SwiftShader, không do ngón). **Không thấy tốn fps do thêm ngón.** Hạn chế: fps phẳng quanh 101 đến 104 cho thấy có trần khác của môi trường, nên số này chỉ nói "không tụt", chưa đo được mức dư; chưa đo ở bậc nhẹ, chưa đo trên iPhone thật.
+
+**fps trên iPhone 15 Pro Max (2026-11-14):** Safari, bản build qua Tailscale, bậc đầy đủ, `?fps=0` (không giới hạn). fps quanh 59 đến 60, thấp nhất 57. Đó là trần màn hình (như 4.1), nên chỉ cho biết **không tụt**, không cho biết mức dư. Chưa so riêng bản trước 4.7.1.1 ở lần đo này, chưa đo bậc nhẹ (`fps=20`), chưa đo nhiệt và pin.
+
+Chưa làm: xem tư thế ngón trên điện thoại, chụp lại sprite (4.7.4).
 
 ### Hướng B (để phát triển sau, chưa làm)
 
