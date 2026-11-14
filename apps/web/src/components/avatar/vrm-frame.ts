@@ -8,6 +8,8 @@ export const AVATAR_URL = (import.meta.env.VITE_AVATAR_URL as string | undefined
 // Phần chiều cao model hiện trong khung (từ đỉnh đầu xuống), và hệ số bề ngang so với khoảng cách hai vai.
 const UPPER_BODY = 0.62;
 const ARM_ROOM = 4;
+/** Biên độ nhún vai so với biên độ ngực (`pose.breath.amp`); giá trị khởi đầu, chỉnh bằng mắt (4.7.2). */
+export const SHOULDER_BREATH_GAIN = 6;
 /** Góc hạ tay khỏi tư thế chữ T (radian). */
 export const ARM_RAD = MathUtils.degToRad(58);
 
@@ -52,17 +54,19 @@ export const REST_ARM: ArmPose = {
 
 /**
  * Đặt tư thế hai tay. Dùng chung cho avatar 3D và cho việc chụp sprite để hai bên khớp nhau.
+ * `shrug` (radian, dương là nhún vai lên) cộng thêm vào góc vai để làm nhịp thở (4.7.2), cánh tay trên bù ngược lại để tay không đung đưa; sprite không truyền nên là 0.
  * Bone nào model không có thì bỏ qua.
  */
-export function applyArmPose(vrm: VRM, arm: ArmPose) {
+export function applyArmPose(vrm: VRM, arm: ArmPose, shrug = 0) {
   const h = vrm.humanoid;
   const set = (side: "left" | "right", sign: 1 | -1) => {
     const shoulder = h.getNormalizedBoneNode(`${side}Shoulder`);
     const upper = h.getNormalizedBoneNode(`${side}UpperArm`);
     const lower = h.getNormalizedBoneNode(`${side}LowerArm`);
     const hand = h.getNormalizedBoneNode(`${side}Hand`);
-    if (shoulder) shoulder.rotation.z = sign * arm.shoulderZ;
-    if (upper) upper.rotation.z = sign * arm.upperZ;
+    if (shoulder) shoulder.rotation.z = sign * (arm.shoulderZ - shrug);
+    // Cánh tay trên bù đúng phần vai nhún để tổng góc không đổi: tay giữ hướng, chỉ gốc tay nhích lên (nếu không tay quét ngang như con lắc).
+    if (upper) upper.rotation.z = sign * (arm.upperZ + shrug);
     if (lower) lower.rotation.set(0, sign * arm.lowerY, sign * arm.lowerZ);
     if (hand) hand.rotation.set(0, sign * arm.handY, 0);
     for (const f of FINGERS) {

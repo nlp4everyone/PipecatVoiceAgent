@@ -452,7 +452,7 @@ hưởng luôn qua WebView.
 | 4.7.0.2 | Trang debug (ví dụ `/?avatar-pose`) có thanh trượt cho từng góc, và xác định trục xoay của khuỷu/bàn tay/vai trong không gian normalized của VRM 0.x (kể cả thứ tự Euler) | Để "chỉnh bằng mắt" ở 4.7.1 không phải sửa code rồi nạp lại; trục xoay chưa ai thử |
 | 4.7.1 | Tư thế nghỉ: hạ tay khỏi chữ T bằng cả vai và cánh tay, gập nhẹ khuỷu, bàn tay thả lỏng | Thay cho một góc `ARM_RAD` duy nhất. Giá trị chỉnh bằng mắt |
 | 4.7.1.1 | Bàn tay cong nhẹ: thêm bộ góc cong cố định cho các bone ngón vào `REST_ARM` | Làm theo điều kiện ở câu 1 (ngón duỗi trông cứng, đã được xác nhận khi xem 4.7.1). Cần đo trục ngón trên các model có ngón, thêm thanh trượt ngón vào trang debug, chỉnh bằng mắt; `chibi03` thiếu bone ngón thì bỏ qua; đo lại fps bằng `?avatar-fps` |
-| 4.7.2 | Nhịp thở: vai nhún nhẹ, tay đung đưa rất nhỏ theo nhịp | Dùng chung bộ định thời với chuyển động nhàn rỗi |
+| 4.7.2 | Nhịp thở: giữ `chest.rotation.x` hiện có, thêm vai (`leftShoulder`, `rightShoulder`) nhún nhẹ cùng pha qua `applyArmPose(vrm, arm, shrug)` | Theo quyết định 4. Không làm tay đung đưa riêng: tay là con của ngực nên đã đung đưa theo ngực và vai, thêm nữa dễ xuyên thân và khó chỉnh chung với 4.7.3. Chỉ bậc 3D, sprite không đổi |
 | 4.7.3 | Theo trạng thái: nói thì tay cử động nhẹ theo mức miệng, nghĩ thì nâng tay hơi gập, nghe thì tay yên | Trạng thái lấy từ `use-avatar-state.ts`, chuyển mượt bằng `damp` sẵn có |
 | 4.7.4 | Cập nhật khung camera và chụp lại sprite | Tư thế tay đổi thì `vrm-frame.ts` (bề ngang vai và tay) phải kiểm tra lại, và 16 ảnh sprite phải chụp lại bằng `node tools/capture-sprites.mjs` để khớp bản 3D |
 
@@ -551,6 +551,17 @@ Trung vị chênh không quá 1 fps, số mẫu tụt giống nhau (mẫu tụt 
 **fps trên iPhone 15 Pro Max (2026-11-14):** Safari, bản build qua Tailscale, bậc đầy đủ, `?fps=0` (không giới hạn). fps quanh 59 đến 60, thấp nhất 57. Đó là trần màn hình (như 4.1), nên chỉ cho biết **không tụt**, không cho biết mức dư. Chưa so riêng bản trước 4.7.1.1 ở lần đo này, chưa đo bậc nhẹ (`fps=20`), chưa đo nhiệt và pin.
 
 Chưa làm: xem tư thế ngón trên điện thoại, chụp lại sprite (4.7.4).
+
+### Kết quả bước 4.7.2 (nhịp thở bằng vai)
+
+Giữ `chest.rotation.x` như cũ và thêm vai nhún cùng pha. `applyArmPose(vrm, arm, shrug)` nhận thêm `shrug` (radian, dương là nhún vai lên); `avatar-stage.tsx` tính `breath = sin(t * speed) * amp * k` một lần mỗi khung rồi dùng cho cả ngực (`chest.rotation.x = breath`) và vai (`shrug = breath * SHOULDER_BREATH_GAIN`). `sprite-capture.tsx` không đổi vì không truyền `shrug`. Hệ số mic tắt `k` áp cho cả vai.
+
+- **Biên độ:** `SHOULDER_BREATH_GAIN` = 6 (đặt trong `vrm-frame.ts`). Giá trị đầu 2,5 (khoảng ±2°) không thấy được; 6 cho vai nhún khoảng ±3° đến ±5° tùy trạng thái (`breath.amp` 0,010 đến 0,015), chỉnh bằng mắt.
+- **Bù góc cánh tay trên:** cánh tay trên đặt là `upperZ + shrug`. Lần đầu không bù thì xoay vai kéo cả cánh tay quét ngang như con lắc (bàn tay lệch vài cm), nhìn như vẫy tay. Có bù thì tay giữ hướng, chỉ gốc tay nhích lên.
+- **Không làm tay đung đưa riêng:** tay là con của ngực nên đã chuyển động theo ngực và vai; thêm nữa dễ xuyên thân và khó chỉnh chung với 4.7.3.
+- **Đã xem:** trang `/?avatar-expression` trên máy (dev server) và trên iPhone 15 Pro Max (bản build, Tailscale): vai nhún nhẹ, đánh giá ổn.
+- **Chưa kiểm tra:** xuyên thân ở nhiều biểu cảm; `Mocking_Spit_Strawberry` và `chibi03`; fps sau thay đổi (chỉ thêm một phép trừ mỗi khung nên rủi ro thấp, chưa đo); mic tắt trên bản gọi thật.
+- **Còn lại, để 4.7.3:** cánh tay vẫn bị đánh giá hơi cứng (tư thế tĩnh, không chuyển động riêng, mọi trạng thái giống nhau). Đây không thuộc 4.7.2; xử lý bằng chuyển động theo trạng thái và mức miệng ở 4.7.3, và nếu sau đó vẫn cứng thì xét hướng B. Ở `speaking`, `chest.rotation.z` (`sway` 0,03) cũng làm tay đung đưa theo thân; có từ trước 4.7.2, chưa động tới.
 
 ### Hướng B (để phát triển sau, chưa làm)
 

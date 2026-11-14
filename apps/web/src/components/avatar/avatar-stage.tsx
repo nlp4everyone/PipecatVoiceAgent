@@ -21,7 +21,7 @@ import {
   MOUTH_SORROW_OVERLAP,
   useAvatarPose,
 } from "./use-avatar-state";
-import { applyArmPose, AVATAR_URL, frameUpperBody, prepareVrm } from "./vrm-frame";
+import { applyArmPose, AVATAR_URL, frameUpperBody, prepareVrm, SHOULDER_BREATH_GAIN } from "./vrm-frame";
 
 // Expression cảm xúc do avatar-stage tự điều khiển; miệng do `useAvatarLipsync`.
 const EMOTIONS = ["happy", "relaxed", "sad", "surprised"] as const;
@@ -242,11 +242,12 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
     const h = vrm.humanoid;
     const k = muted ? 0.5 : 1; // mic tắt thì mọi chuyển động nhẹ đi
 
-    // Tay hạ xuống; ngực thở, lắc nhẹ khi nói.
-    applyArmPose(vrm, pose.arm);
+    // Tay hạ xuống; ngực thở và vai nhún cùng pha, lắc nhẹ khi nói.
+    const breath = Math.sin(t * pose.breath.speed) * pose.breath.amp * k;
+    applyArmPose(vrm, pose.arm, breath * SHOULDER_BREATH_GAIN);
     const chest = h.getNormalizedBoneNode("chest") ?? h.getNormalizedBoneNode("spine");
     if (chest) {
-      chest.rotation.x = Math.sin(t * pose.breath.speed) * pose.breath.amp * k;
+      chest.rotation.x = breath;
       chest.rotation.z = MathUtils.damp(chest.rotation.z, Math.sin(t * 0.9) * pose.sway * k, 4, dt);
     }
 
