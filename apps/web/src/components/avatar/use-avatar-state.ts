@@ -26,6 +26,12 @@ export interface AvatarPose {
   emotion: Partial<Record<"happy" | "relaxed" | "sad" | "surprised", number>>;
 }
 
+/**
+ * Tay khi nghĩ (4.7.3a): hạ cánh tay trên bớt 10° và gập khuỷu tới 75°, cẳng tay đưa ngang ra trước bụng.
+ * Chọn bằng cách chụp thử trên `?avatar-pose` (nhìn trước và nhìn bên, không xuyên thân).
+ */
+const THINKING_ARM: ArmPose = { ...REST_ARM, upperZ: (45 * Math.PI) / 180, lowerY: (-75 * Math.PI) / 180 };
+
 const BASE: AvatarPose = {
   tilt: 0,
   pitch: 0,
@@ -49,6 +55,7 @@ export const AVATAR_POSES: Record<OrbState, AvatarPose> = {
     pitch: -0.08,
     gaze: { x: 0.5, y: 0.45 },
     breath: { amp: 0.01, speed: 1.2 },
+    arm: THINKING_ARM,
   },
   speaking: { ...BASE, sway: 0.03, nod: { amp: 0.025, hz: 0.6 }, emotion: { happy: 0.25 } },
 };

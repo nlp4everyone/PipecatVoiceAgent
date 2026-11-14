@@ -453,7 +453,8 @@ hưởng luôn qua WebView.
 | 4.7.1 | Tư thế nghỉ: hạ tay khỏi chữ T bằng cả vai và cánh tay, gập nhẹ khuỷu, bàn tay thả lỏng | Thay cho một góc `ARM_RAD` duy nhất. Giá trị chỉnh bằng mắt |
 | 4.7.1.1 | Bàn tay cong nhẹ: thêm bộ góc cong cố định cho các bone ngón vào `REST_ARM` | Làm theo điều kiện ở câu 1 (ngón duỗi trông cứng, đã được xác nhận khi xem 4.7.1). Cần đo trục ngón trên các model có ngón, thêm thanh trượt ngón vào trang debug, chỉnh bằng mắt; `chibi03` thiếu bone ngón thì bỏ qua; đo lại fps bằng `?avatar-fps` |
 | 4.7.2 | Nhịp thở: giữ `chest.rotation.x` hiện có, thêm vai (`leftShoulder`, `rightShoulder`) nhún nhẹ cùng pha qua `applyArmPose(vrm, arm, shrug)` | Theo quyết định 4. Không làm tay đung đưa riêng: tay là con của ngực nên đã đung đưa theo ngực và vai, thêm nữa dễ xuyên thân và khó chỉnh chung với 4.7.3. Chỉ bậc 3D, sprite không đổi |
-| 4.7.3 | Theo trạng thái: nói thì tay cử động nhẹ theo mức miệng, nghĩ thì nâng tay hơi gập, nghe thì tay yên | Trạng thái lấy từ `use-avatar-state.ts`, chuyển mượt bằng `damp` sẵn có |
+| 4.7.3a | Tay theo trạng thái: nghĩ (`thinking`) thì nâng tay hơi gập, nghe và nói thì giữ tư thế nghỉ. Thêm damp cho các trường tay của `ArmPose` để chuyển mượt giữa trạng thái | Theo quyết định 3: chỉ `AVATAR_POSES.thinking` có tay riêng, không đụng `EXPRESSIONS`. `AVATAR_POSES.speaking.arm` giữ `REST_ARM` để sprite không đổi. Tìm tư thế nâng tay trên `?avatar-pose`, kiểm tra xuyên thân và xuyên mặt. Không cần miệng nên xem được ngay trên `/?avatar-expression`. **Xong khi:** vào `thinking` thì tay nâng mượt, thoát ra thì hạ mượt, không xuyên thân, `speaking` và `listening` không đổi |
+| 4.7.3b | Tay theo mức miệng khi nói: khuỷu và cổ tay nhích vài độ theo mức mở miệng | Theo quyết định 5: dời `sampleMouth` lên trước phần tay (vẫn gọi một lần mỗi khung), lấy max các viseme, `damp` khoảng 3 đến 4, không động cánh tay trên, nhân `k` khi tắt mic. Thêm tham số `?mouth=sim` (mức miệng giả) để thử vì trang thử không có track bot. **Xong khi:** tay nhích nhẹ theo miệng, không giật ở bậc nhẹ (20 fps), `?avatar-fps` không tụt, lip-sync không đổi. Làm sau 4.7.3a |
 | 4.7.4 | Cập nhật khung camera và chụp lại sprite | Tư thế tay đổi thì `vrm-frame.ts` (bề ngang vai và tay) phải kiểm tra lại, và 16 ảnh sprite phải chụp lại bằng `node tools/capture-sprites.mjs` để khớp bản 3D |
 
 **Xong khi:** bản 3D có tư thế nghỉ tự nhiên và tay chuyển động nhẹ theo trạng thái mà không
@@ -562,6 +563,15 @@ Giữ `chest.rotation.x` như cũ và thêm vai nhún cùng pha. `applyArmPose(v
 - **Đã xem:** trang `/?avatar-expression` trên máy (dev server) và trên iPhone 15 Pro Max (bản build, Tailscale): vai nhún nhẹ, đánh giá ổn.
 - **Chưa kiểm tra:** xuyên thân ở nhiều biểu cảm; `Mocking_Spit_Strawberry` và `chibi03`; fps sau thay đổi (chỉ thêm một phép trừ mỗi khung nên rủi ro thấp, chưa đo); mic tắt trên bản gọi thật.
 - **Còn lại, để 4.7.3:** cánh tay vẫn bị đánh giá hơi cứng (tư thế tĩnh, không chuyển động riêng, mọi trạng thái giống nhau). Đây không thuộc 4.7.2; xử lý bằng chuyển động theo trạng thái và mức miệng ở 4.7.3, và nếu sau đó vẫn cứng thì xét hướng B. Ở `speaking`, `chest.rotation.z` (`sway` 0,03) cũng làm tay đung đưa theo thân; có từ trước 4.7.2, chưa động tới.
+
+### Kết quả bước 4.7.3a (tay theo trạng thái)
+
+- **Tư thế `thinking`:** `THINKING_ARM` (`use-avatar-state.ts`) = `REST_ARM` với cánh tay trên `upperZ` 45° (nghỉ 55°) và khuỷu `lowerY` -75° (nghỉ -8°). Chọn bằng cách chụp thử headless trên `?avatar-pose` (nhìn trước và nhìn bên): -70° và -75° gần như giống nhau, -100° gập quá sâu. Cẳng tay đưa ngang ra trước bụng, không thấy xuyên thân. Các trạng thái khác (`idle`, `connecting`, `listening`, `speaking`) vẫn là `REST_ARM`, nên sprite không đổi.
+- **Chuyển mượt:** `dampArm` (`vrm-frame.ts`) damp từng trường `ArmPose`. `avatar-stage.tsx` giữ tư thế đích (`armGoal`) và tư thế hiện tại (`arm`) trong hai `ref`, damp hai tầng nối tiếp (`ARM_DAMP` = 5, khoảng 0,8 giây đến gần đích) rồi mới gọi `applyArmPose`. Một tầng `damp` (λ = 4) bị thấy giật lúc hạ tay về vì nhanh nhất ngay khung đầu.
+- **Đã xem trên máy** (`/?avatar-expression`, dev server): nâng và hạ tay mượt, tự nhiên, không chạm thân; tốc độ ổn.
+- **Chưa kiểm tra:** iPhone; model khác (`Mocking_Spit_Strawberry`, `chibi03`); fps (chỉ thêm khoảng 9 phép `damp` mỗi khung, rủi ro thấp, chưa đo); chuyển ở bậc nhẹ 20 fps.
+- **Vì sao `thinking` đưa tay lên:** là quyết định thiết kế (quyết định 3, thêm gợi ý từ phase 1), chưa có thử nghiệm cho thấy nó làm trạng thái dễ nhận ra hơn. Tư thế hiện tại giống đang giải thích hơn là đang nghĩ.
+- **4.7.3a.1 (sẽ thử):** đưa tay gần cằm hơn. Cần xoay cánh tay trên ra trước (trục x, chưa đo), thêm `upperX` vào `ArmPose`, và xem kỹ chạm mặt hoặc tóc. Nếu không đẹp thì quay về tư thế ở bước này.
 
 ### Hướng B (để phát triển sau, chưa làm)
 

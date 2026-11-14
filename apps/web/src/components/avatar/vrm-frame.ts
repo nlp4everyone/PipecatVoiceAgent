@@ -52,6 +52,11 @@ export const REST_ARM: ArmPose = {
   thumb: MathUtils.degToRad(8),
 };
 
+/** Đưa `cur` về `target` từng trường một bằng `damp` (sửa trực tiếp `cur`), để tay chuyển mượt giữa các trạng thái (4.7.3a). */
+export function dampArm(cur: ArmPose, target: ArmPose, lambda: number, dt: number) {
+  for (const key of Object.keys(target) as (keyof ArmPose)[]) cur[key] = MathUtils.damp(cur[key], target[key], lambda, dt);
+}
+
 /**
  * Đặt tư thế hai tay. Dùng chung cho avatar 3D và cho việc chụp sprite để hai bên khớp nhau.
  * `shrug` (radian, dương là nhún vai lên) cộng thêm vào góc vai để làm nhịp thở (4.7.2), cánh tay trên bù ngược lại để tay không đung đưa; sprite không truyền nên là 0.

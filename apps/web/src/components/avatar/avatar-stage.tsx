@@ -21,9 +21,15 @@ import {
   MOUTH_SORROW_OVERLAP,
   useAvatarPose,
 } from "./use-avatar-state";
-import { applyArmPose, AVATAR_URL, frameUpperBody, prepareVrm, SHOULDER_BREATH_GAIN } from "./vrm-frame";
+import { applyArmPose, type ArmPose, AVATAR_URL, dampArm, frameUpperBody, prepareVrm, REST_ARM, SHOULDER_BREATH_GAIN } from "./vrm-frame";
 
 // Expression cảm xúc do avatar-stage tự điều khiển; miệng do `useAvatarLipsync`.
+/**
+ * Độ nhanh khi tay chuyển tư thế giữa các trạng thái (lớn là nhanh). Dùng hai `damp` nối tiếp (đích rồi tay)
+ * để chuyển động êm cả lúc bắt đầu lẫn lúc dừng; một `damp` đơn nhanh nhất ngay khung đầu nên thấy giật.
+ * Hai tầng cùng giá trị 5 cho khoảng 0,8 giây đến gần đích.
+ */
+const ARM_DAMP = 5;
 const EMOTIONS = ["happy", "relaxed", "sad", "surprised"] as const;
 interface AvatarStageProps {
   state: OrbState;
@@ -203,6 +209,9 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
   const lookTarget = useMemo(() => new Object3D(), []);
   const blink = useRef({ next: 2, t: -1 });
   const nodPhase = useRef(0);
+  // Tư thế tay hiện tại, damp dần về tư thế đích của trạng thái (4.7.3a).
+  const arm = useRef<ArmPose>({ ...REST_ARM });
+  const armGoal = useRef<ArmPose>({ ...REST_ARM });
   const cam = useRef({ y: 0, z: 0 });
 
   // Chuẩn bị model một lần rồi đặt camera nửa người trên.
@@ -244,7 +253,9 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
 
     // Tay hạ xuống; ngực thở và vai nhún cùng pha, lắc nhẹ khi nói.
     const breath = Math.sin(t * pose.breath.speed) * pose.breath.amp * k;
-    applyArmPose(vrm, pose.arm, breath * SHOULDER_BREATH_GAIN);
+    dampArm(armGoal.current, pose.arm, ARM_DAMP, dt);
+    dampArm(arm.current, armGoal.current, ARM_DAMP, dt);
+    applyArmPose(vrm, arm.current, breath * SHOULDER_BREATH_GAIN);
     const chest = h.getNormalizedBoneNode("chest") ?? h.getNormalizedBoneNode("spine");
     if (chest) {
       chest.rotation.x = breath;
