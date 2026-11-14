@@ -571,7 +571,23 @@ Giữ `chest.rotation.x` như cũ và thêm vai nhún cùng pha. `applyArmPose(v
 - **Đã xem trên máy** (`/?avatar-expression`, dev server): nâng và hạ tay mượt, tự nhiên, không chạm thân; tốc độ ổn.
 - **Chưa kiểm tra:** iPhone; model khác (`Mocking_Spit_Strawberry`, `chibi03`); fps (chỉ thêm khoảng 9 phép `damp` mỗi khung, rủi ro thấp, chưa đo); chuyển ở bậc nhẹ 20 fps.
 - **Vì sao `thinking` đưa tay lên:** là quyết định thiết kế (quyết định 3, thêm gợi ý từ phase 1), chưa có thử nghiệm cho thấy nó làm trạng thái dễ nhận ra hơn. Tư thế hiện tại giống đang giải thích hơn là đang nghĩ.
-- **4.7.3a.1 (sẽ thử):** đưa tay gần cằm hơn. Cần xoay cánh tay trên ra trước (trục x, chưa đo), thêm `upperX` vào `ArmPose`, và xem kỹ chạm mặt hoặc tóc. Nếu không đẹp thì quay về tư thế ở bước này.
+- **4.7.3a.1:** đã làm, xem mục bên dưới (tay phải nắm hờ chống cằm, thay cho tư thế cẳng tay ngang bụng ở trên).
+
+### Kết quả bước 4.7.3a.1 (tay phải nắm hờ chống cằm)
+
+Tư thế hai tay đối xứng ở má bị thấy giống ngạc nhiên hơn đang nghĩ và che mặt, nên `thinking` chỉ nâng **tay phải** (tay trái giữ tư thế nghỉ). `AvatarPose` thêm `armRight?` tuỳ chọn; `applyArmPose(vrm, arm, shrug, armRight = arm)`; `avatar-stage.tsx` damp hai tầng cho cả hai tay. `ArmPose` thêm `upperX`, `thumbMetacarpalY`, `thumbMetacarpalZ`, `thumbDistal` (mặc định 0, nên tư thế nghỉ và sprite không đổi).
+
+**Số đo (2026-11-14, trên `?avatar-pose`, bên trái, hệ trục bàn tay):**
+- Cánh tay trên `x` dương đưa ra trước và lên, âm đưa ra sau (tay lọt sau thân); cùng dấu cho hai bên.
+- Gập khuỷu `y` càng âm tay càng lên: -75° ngang bụng, -105° đến -114° ngang cằm, -120° sát thái dương (giống chào); `lowerZ` dương và `upperZ` lớn đưa khuỷu vào thân, nên tay vào giữa thay vì dang ra má.
+- Ngón cái: cả ba đốt (`ThumbMetacarpal`, `ThumbProximal`, `ThumbDistal` trong tên bone của three-vrm) cong vào lòng bàn tay khi `z` dương. `+z` của bàn tay hướng về ngón út, nên `y` dương ở đốt gốc đưa ngón cái vắt ngang lòng bàn tay (âm thì chúc xuống như "dislike"), `x` âm kéo vào gần lòng bàn tay. Code cũ chỉ đặt `ThumbProximal`, hai đốt còn lại không bao giờ được đặt nên ngón cái chìa ra khi nắm tay.
+- Thử bằng mắt không hội tụ, nên dò lưới bằng số (đầu ngón cái sát điểm giữa đốt giữa ngón trỏ và ngón giữa đã cong): lệch 1 cm (6 cm khi chưa chỉnh).
+
+**Giá trị chọn (`THINKING_ARM_RIGHT`, `use-avatar-state.ts`):** cánh tay trên `x` 52° và `z` 58°; khuỷu `y` -114° và `z` 32°; cổ tay `y` -25°; ngón cong 70°, 85°, 50°; ngón cái: đốt gốc `y` 60° và `z` -20°, hai đốt sau cong 60°. Các mức khác đã thử trong app thật: `lowerZ` 22° thì nắm tay ở góc hàm bên, 40° với cánh tay trên 60° thì cẳng tay nằm ngang và nắm tay tụt dưới cằm; ngón cái cũng tách ra ba lần thử (y âm chúc xuống, y dương không kèm x thì vẫn chìa ra).
+
+**Đã xem:** chuỗi chuyển `speaking` sang `thinking` bằng ảnh chụp headless (7 khung, không xuyên thân), và xem trực tiếp trên dev server: nắm tay sát cằm, tự nhiên.
+
+**Chưa kiểm tra:** iPhone; model khác (`Mocking_Spit_Strawberry`, `chibi03`, đặc biệt `chibi03` thiếu bone ngón); fps (thêm một cặp `damp` cho tay phải và vài bone ngón cái, rủi ro thấp); bậc nhẹ 20 fps.
 
 ### Hướng B (để phát triển sau, chưa làm)
 

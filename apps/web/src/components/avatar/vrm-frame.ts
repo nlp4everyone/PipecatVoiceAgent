@@ -16,7 +16,7 @@ export const ARM_RAD = MathUtils.degToRad(58);
 /**
  * Tư thế một tay (góc radian, dùng cho cả hai bên: bên phải đảo dấu y và z, giữ x).
  * Trục đo ở 4.7.0.2 (docs/plans/avatar-3d/phase-4.md): z của vai và cánh tay trên là hạ xuống;
- * y của khuỷu và cổ tay âm là gập ra trước; z của khuỷu dương là đưa vào phía thân; z của ngón dương là cong về lòng bàn tay
+ * x của cánh tay trên dương là đưa ra trước (cả hai bên); y của khuỷu và cổ tay âm là gập ra trước; z của khuỷu dương là đưa vào phía thân; z của ngón dương là cong về lòng bàn tay
  * (đo ở 4.7.1.1).
  */
 export interface ArmPose {
@@ -24,6 +24,8 @@ export interface ArmPose {
   shoulderZ: number;
   /** Hạ cánh tay trên khỏi tư thế chữ T (trục z). */
   upperZ: number;
+  /** Đưa cánh tay trên ra trước (x dương là ra trước và lên, đo ở 4.7.3a.1). Cùng dấu cho cả hai bên. */
+  upperX: number;
   /** Khuỷu gập ra trước (y, âm là gập) và đưa vào thân (z, dương). */
   lowerY: number;
   lowerZ: number;
@@ -34,6 +36,13 @@ export interface ArmPose {
   fingerIntermediate: number;
   fingerDistal: number;
   thumb: number;
+  /**
+   * Ngón cái vắt ngang lòng bàn tay (đo ở 4.7.3a.1): đốt gốc xoay y dương là đưa về phía ngón út, z là cong;
+   * đốt cuối cong theo z. Cả ba đều 0 ở tư thế nghỉ. Dấu y và z đảo cho tay phải như các trường khác.
+   */
+  thumbMetacarpalY: number;
+  thumbMetacarpalZ: number;
+  thumbDistal: number;
 }
 
 const FINGERS = ["Index", "Middle", "Ring", "Little"] as const;
@@ -42,6 +51,7 @@ const FINGERS = ["Index", "Middle", "Ring", "Little"] as const;
 export const REST_ARM: ArmPose = {
   shoulderZ: MathUtils.degToRad(6),
   upperZ: MathUtils.degToRad(55),
+  upperX: 0,
   lowerY: MathUtils.degToRad(-8),
   lowerZ: MathUtils.degToRad(3),
   handY: MathUtils.degToRad(-3),
@@ -50,6 +60,9 @@ export const REST_ARM: ArmPose = {
   fingerIntermediate: MathUtils.degToRad(20),
   fingerDistal: MathUtils.degToRad(10),
   thumb: MathUtils.degToRad(8),
+  thumbMetacarpalY: 0,
+  thumbMetacarpalZ: 0,
+  thumbDistal: 0,
 };
 
 /** Đưa `cur` về `target` từng trường một bằng `damp` (sửa trực tiếp `cur`), để tay chuyển mượt giữa các trạng thái (4.7.3a). */
@@ -59,19 +72,20 @@ export function dampArm(cur: ArmPose, target: ArmPose, lambda: number, dt: numbe
 
 /**
  * Đặt tư thế hai tay. Dùng chung cho avatar 3D và cho việc chụp sprite để hai bên khớp nhau.
+ * `armRight` là tư thế riêng của tay phải (mặc định bằng `arm`, tức đối xứng), dùng cho cử chỉ một tay (4.7.3a.1).
  * `shrug` (radian, dương là nhún vai lên) cộng thêm vào góc vai để làm nhịp thở (4.7.2), cánh tay trên bù ngược lại để tay không đung đưa; sprite không truyền nên là 0.
  * Bone nào model không có thì bỏ qua.
  */
-export function applyArmPose(vrm: VRM, arm: ArmPose, shrug = 0) {
+export function applyArmPose(vrm: VRM, arm: ArmPose, shrug = 0, armRight: ArmPose = arm) {
   const h = vrm.humanoid;
-  const set = (side: "left" | "right", sign: 1 | -1) => {
+  const set = (side: "left" | "right", sign: 1 | -1, arm: ArmPose) => {
     const shoulder = h.getNormalizedBoneNode(`${side}Shoulder`);
     const upper = h.getNormalizedBoneNode(`${side}UpperArm`);
     const lower = h.getNormalizedBoneNode(`${side}LowerArm`);
     const hand = h.getNormalizedBoneNode(`${side}Hand`);
     if (shoulder) shoulder.rotation.z = sign * (arm.shoulderZ - shrug);
     // Cánh tay trên bù đúng phần vai nhún để tổng góc không đổi: tay giữ hướng, chỉ gốc tay nhích lên (nếu không tay quét ngang như con lắc).
-    if (upper) upper.rotation.z = sign * (arm.upperZ + shrug);
+    if (upper) upper.rotation.set(arm.upperX, 0, sign * (arm.upperZ + shrug));
     if (lower) lower.rotation.set(0, sign * arm.lowerY, sign * arm.lowerZ);
     if (hand) hand.rotation.set(0, sign * arm.handY, 0);
     for (const f of FINGERS) {
@@ -84,9 +98,13 @@ export function applyArmPose(vrm: VRM, arm: ArmPose, shrug = 0) {
     }
     const thumbProx = h.getNormalizedBoneNode(`${side}ThumbProximal`);
     if (thumbProx) thumbProx.rotation.z = sign * arm.thumb;
+    const thumbMeta = h.getNormalizedBoneNode(`${side}ThumbMetacarpal`);
+    if (thumbMeta) thumbMeta.rotation.set(0, sign * arm.thumbMetacarpalY, sign * arm.thumbMetacarpalZ);
+    const thumbDist = h.getNormalizedBoneNode(`${side}ThumbDistal`);
+    if (thumbDist) thumbDist.rotation.z = sign * arm.thumbDistal;
   };
-  set("left", 1);
-  set("right", -1);
+  set("left", 1, arm);
+  set("right", -1, armRight);
 }
 
 /** Chuẩn bị model một lần: bỏ đỉnh thừa, quay VRM 0.x về hướng +z, tắt frustum culling. */

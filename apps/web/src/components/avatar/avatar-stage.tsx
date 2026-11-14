@@ -212,6 +212,8 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
   // Tư thế tay hiện tại, damp dần về tư thế đích của trạng thái (4.7.3a).
   const arm = useRef<ArmPose>({ ...REST_ARM });
   const armGoal = useRef<ArmPose>({ ...REST_ARM });
+  const armRight = useRef<ArmPose>({ ...REST_ARM });
+  const armRightGoal = useRef<ArmPose>({ ...REST_ARM });
   const cam = useRef({ y: 0, z: 0 });
 
   // Chuẩn bị model một lần rồi đặt camera nửa người trên.
@@ -255,7 +257,9 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
     const breath = Math.sin(t * pose.breath.speed) * pose.breath.amp * k;
     dampArm(armGoal.current, pose.arm, ARM_DAMP, dt);
     dampArm(arm.current, armGoal.current, ARM_DAMP, dt);
-    applyArmPose(vrm, arm.current, breath * SHOULDER_BREATH_GAIN);
+    dampArm(armRightGoal.current, pose.armRight ?? pose.arm, ARM_DAMP, dt);
+    dampArm(armRight.current, armRightGoal.current, ARM_DAMP, dt);
+    applyArmPose(vrm, arm.current, breath * SHOULDER_BREATH_GAIN, armRight.current);
     const chest = h.getNormalizedBoneNode("chest") ?? h.getNormalizedBoneNode("spine");
     if (chest) {
       chest.rotation.x = breath;

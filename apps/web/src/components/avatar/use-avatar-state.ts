@@ -20,17 +20,40 @@ export interface AvatarPose {
   sway: number;
   /** Nhịp thở: biên độ (rad) và tần số (rad/giây). */
   breath: { amp: number; speed: number };
-  /** Tư thế hai tay. */
+  /** Tư thế hai tay (và tay trái nếu có `armRight`). */
   arm: ArmPose;
+  /** Tư thế riêng của tay phải để làm cử chỉ một tay; không có thì hai tay đối xứng theo `arm`. */
+  armRight?: ArmPose;
   /** Giá trị đích của expression cảm xúc (0–1). */
   emotion: Partial<Record<"happy" | "relaxed" | "sad" | "surprised", number>>;
 }
 
 /**
- * Tay khi nghĩ (4.7.3a): hạ cánh tay trên bớt 10° và gập khuỷu tới 75°, cẳng tay đưa ngang ra trước bụng.
- * Chọn bằng cách chụp thử trên `?avatar-pose` (nhìn trước và nhìn bên, không xuyên thân).
+ * Tay phải khi nghĩ (4.7.3a.1): nắm tay hờ chống cằm. Cánh tay trên ra trước 52° và khép vào 58°, khuỷu gập 114°
+ * và đưa vào thân 32°, cổ tay gập 25°, bốn ngón cong 70°, 85°, 50°. Ngón cái vắt qua lòng bàn tay: đốt gốc y 60° và
+ * z -20°, hai đốt sau cong 60°; bộ góc này tìm bằng cách dò lưới sao cho đầu ngón cái nằm trên đốt giữa ngón trỏ
+ * và ngón giữa, nếu không ngón cái chìa ra ngoài nắm tay.
+ * Tay trái giữ tư thế nghỉ, để mặt không bị che và nhìn ra đang nghĩ chứ không phải ngạc nhiên (hai tay áp má
+ * đối xứng thì giống ngạc nhiên). Bàn tay xòe thì giống chào, nắm chặt (85°, 100°, 65°) thì giống nắm đấm;
+ * Đưa khuỷu vào thân 22° thì nắm tay ở góc hàm (bên); 40° với cánh tay trên 60° thì cẳng tay nằm ngang và nắm
+ * tay tụt dưới cằm. Chọn bằng cách chụp thử trên `?avatar-pose`.
  */
-const THINKING_ARM: ArmPose = { ...REST_ARM, upperZ: (45 * Math.PI) / 180, lowerY: (-75 * Math.PI) / 180 };
+const deg = (d: number) => (d * Math.PI) / 180;
+const THINKING_ARM_RIGHT: ArmPose = {
+  ...REST_ARM,
+  upperX: deg(52),
+  upperZ: deg(58),
+  lowerY: deg(-114),
+  lowerZ: deg(32),
+  handY: deg(-25),
+  fingerProximal: deg(70),
+  fingerIntermediate: deg(85),
+  fingerDistal: deg(50),
+  thumb: deg(60),
+  thumbMetacarpalY: deg(60),
+  thumbMetacarpalZ: deg(-20),
+  thumbDistal: deg(60),
+};
 
 const BASE: AvatarPose = {
   tilt: 0,
@@ -55,7 +78,7 @@ export const AVATAR_POSES: Record<OrbState, AvatarPose> = {
     pitch: -0.08,
     gaze: { x: 0.5, y: 0.45 },
     breath: { amp: 0.01, speed: 1.2 },
-    arm: THINKING_ARM,
+    armRight: THINKING_ARM_RIGHT,
   },
   speaking: { ...BASE, sway: 0.03, nod: { amp: 0.025, hz: 0.6 }, emotion: { happy: 0.25 } },
 };
