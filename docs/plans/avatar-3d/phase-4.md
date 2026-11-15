@@ -436,7 +436,7 @@ và `immutable` bỏ hẳn vòng đó.
 
 ## Kế hoạch bước 4.7 (tay tự nhiên hơn)
 
-**Tiến độ (2026-11-14):** xong 4.7.0 đến 4.7.3b (kết quả từng bước ở các mục "Kết quả bước 4.7.x" bên dưới); còn 4.7.4 (khung camera và chụp lại sprite) và các mục chưa kiểm tra ghi ở từng bước (bot thật, iPhone, `chibi03`).
+**Tiến độ (2026-11-14):** xong 4.7.0 đến 4.7.4 (kết quả từng bước ở các mục "Kết quả bước 4.7.x" bên dưới); còn các mục chưa kiểm tra ghi ở từng bước (bot thật, iPhone, `chibi03`).
 
 Hiện trạng trước khi làm 4.7 (đọc từ code, nay đã đổi): tay chỉ được hạ một góc cố định `ARM_RAD` (58°) bằng cách đặt
 `leftUpperArm.rotation.z` và `rightUpperArm.rotation.z` một lần để thoát tư thế chữ T
@@ -458,7 +458,7 @@ hưởng luôn qua WebView.
 | 4.7.3a | Tay theo trạng thái: `thinking` nâng tay, nghe và nói giữ tư thế nghỉ. Thêm damp hai tầng cho các trường tay của `ArmPose` để chuyển mượt giữa trạng thái | Theo quyết định 3: chỉ `AVATAR_POSES.thinking` có tay riêng, không đụng `EXPRESSIONS`. `AVATAR_POSES.speaking.arm` giữ `REST_ARM` để sprite không đổi. Tư thế đầu tiên (hai tay, cẳng tay ngang bụng) được thay bằng 4.7.3a.1. **Xong khi:** vào `thinking` thì tay nâng mượt, thoát ra thì hạ mượt, không xuyên thân, `speaking` và `listening` không đổi. **Đã xong** |
 | 4.7.3a.1 | Tay `thinking` kiểu một tay: tay phải nắm hờ chống cằm, tay trái giữ nghỉ | Hai tay áp má đối xứng bị thấy giống ngạc nhiên và che mặt. Thêm `AvatarPose.armRight`, `upperX` và ba trường ngón cái (`thumbMetacarpalY`, `thumbMetacarpalZ`, `thumbDistal`) vào `ArmPose`; đo trục cánh tay trên và ngón cái, dò lưới góc ngón cái. **Xong khi:** nắm tay sát cằm, ngón cái không chìa ra, không che miệng. **Đã xong** |
 | 4.7.3b | Tay theo mức miệng khi nói: khuỷu và cổ tay nhích vài độ theo mức mở miệng | Theo quyết định 5: dời `sampleMouth` lên trước phần tay (vẫn gọi một lần mỗi khung), lấy max các viseme, `damp` khoảng 3 đến 4, không động cánh tay trên, nhân `k` khi tắt mic. Thêm tham số `?mouth=sim` (mức miệng giả) để thử vì trang thử không có track bot. **Xong khi:** tay nhích nhẹ theo miệng, không giật ở bậc nhẹ (20 fps), `?avatar-fps` không tụt, lip-sync không đổi. Làm sau 4.7.3a. **Đã xong** (xem bot thật chưa kiểm tra) |
-| 4.7.4 | Cập nhật khung camera và chụp lại sprite | Tư thế tay đổi thì `vrm-frame.ts` (bề ngang vai và tay) phải kiểm tra lại, và 16 ảnh sprite phải chụp lại bằng `node tools/capture-sprites.mjs` để khớp bản 3D |
+| 4.7.4 | Cập nhật khung camera và chụp lại sprite | Tư thế tay đổi thì `vrm-frame.ts` (bề ngang vai và tay) phải kiểm tra lại, và 16 ảnh sprite phải chụp lại bằng `node tools/capture-sprites.mjs` để khớp bản 3D. **Đã xong** (xem "Kết quả bước 4.7.4"; còn các mục chưa kiểm tra ghi ở đó) |
 
 **Xong khi:** bản 3D có tư thế nghỉ tự nhiên và tay chuyển động nhẹ theo trạng thái mà không
 tốn rõ rệt fps ở bậc nhẹ; khung camera không cắt tay; sprite khớp tư thế mới.
@@ -601,6 +601,19 @@ Tư thế hai tay đối xứng ở má bị thấy giống ngạc nhiên hơn �
 - **Chưa kiểm tra:** với bot thật (sóng giả đều, lời nói thật ngắt quãng) và lip-sync với track thật sau khi dời `sampleMouth` lên trước; tắt mic trên bản gọi thật; chuyển trạng thái trong lúc nói (từ `thinking` sang `speaking`, và thẻ biểu cảm `thinking` khi bot nói); `Mocking_Spit_Strawberry` và `chibi03`; xuyên áo hoặc spring bones khi khuỷu gập thêm; fps trên iPhone ở 20 fps (nhích vài độ có thể thành nhảy từng nấc) và `fps=0`; fps desktop (chỉ thêm vài phép tính mỗi khung, rủi ro thấp).
 - **Cánh tay còn cứng không:** đánh giá lại sau khi thử với bot thật; nếu vẫn cứng thì xét hướng B.
 
+### Kết quả bước 4.7.4 (khung camera và chụp lại sprite)
+
+- **Sprite chụp lại (2026-11-14):** cả 16 ảnh chụp bằng `node tools/capture-sprites.mjs` (model mặc định `Mocking_Spit_Strawberry`). Bộ cũ chụp ngày 2026-11-03, trước 4.7, tay còn dang gần chữ T nên lệch bản 3D. Mọi ảnh dùng chung tư thế nghỉ `REST_ARM`.
+- **Sprite `thinking` giữ tay nghỉ (cách A của quyết định 2):** `sprite-capture.tsx` luôn dùng tay của `AVATAR_POSES.speaking`, nên không ảnh nào có tay chống cằm. Đã chụp thử tay chống cằm cho ba ảnh `thinking` (cách B của quyết định 2, không phải "Hướng B" Mixamo bên dưới) vào thư mục tạm và so bằng mắt: tay không che miệng ở cả ba mức, trông "đang nghĩ" rõ hơn. Không chọn vì ảnh `thinking-*` dùng chung cho trạng thái `thinking` và cho thẻ biểu cảm `thinking` khi bot nói, còn bản 3D chỉ nâng tay ở trạng thái `thinking` (thẻ chỉ đổi đầu và mắt, quyết định 3). Chọn B thì hai bậc lệch nhau ở lúc bot nói, và sprite không có chuyển động tay mượt như bản 3D.
+- **Lỗi `neutral-closed` và cách sửa:** ảnh đầu tiên được dựng ra có viền váy nâng và nghiêng, lặp lại giống hệt (cùng md5) qua hai lần chụp. Do spring bones của váy chưa rời bind pose (suy luận, sửa có hiệu quả nhưng chưa đo trực tiếp). `sprite-capture.tsx` nay dựng một ảnh bỏ đi trước khi chụp thật; ảnh chụp lại cho viền váy phẳng như 15 ảnh còn lại.
+- **Khung `frameUpperBody`:** không sửa. Bề ngang lấy theo khoảng cách vai nhân `ARM_ROOM` (4), chứa được cả tay `thinking` ở khung hẹp. Viền váy bị cắt phẳng ở đáy ảnh ở cả 16 ảnh (cùng khung nửa người trên, `UPPER_BODY` 0,62); bản 3D cũng cắt, nên không coi là lỗi.
+- **Đã kiểm tra:**
+  - Xem bằng mắt cả 16 ảnh trên máy dev (hai lượt, trước và sau khi sửa lỗi váy).
+  - Chụp headless bản 3D (`/?avatar-expression`, khung điện thoại 390×844 và desktop 1280×800): tay `thinking` và tay nghỉ nằm trong khung ở `Mocking_Spit_Strawberry`, `AvatarSample_D`, `AvatarSample_E`; không thấy xuyên thân.
+  - iPhone qua Tailscale, bản build mới: `neutral-closed`, `neutral-wide`, `thinking-small`, `blink` đạt (tay hạ xuống, không cắt ở mép ngang, viền váy cắt phẳng ở đáy).
+  - Bậc sprite trong app với bot thật (`/?tier=sprite`): ảnh đổi theo giọng, tạm ổn. Đổi từ `neutral` sang `thinking` hơi giật vì ảnh đổi tức thì (chưa có crossfade); xử lý ở 4.8.4.
+- **Chưa kiểm tra:** `chibi03` (khung chỉ thấy đầu và vầng hào quang, không thấy tay; có từ trước 4.7, có thể cần khung riêng cho model đầu to); bộ sprite cho model khác (hiện chỉ có cho model mặc định); 12 ảnh còn lại trên iPhone (chỉ xem 4 ảnh); viền váy bị cắt sát đáy ở 3D khung desktop có chấp nhận được không (chưa quyết); độ giật khi đổi biểu cảm ở các cặp khác ngoài `neutral` sang `thinking`.
+
 ### Hướng B (để phát triển sau, chưa làm)
 
 Dùng clip Mixamo (idle, nói chuyện, nghĩ) retarget sang VRM bằng `@pixiv/three-vrm-animation`,
@@ -646,7 +659,7 @@ Lưu ý:
 - 4.8.3 không làm miệng hay xương mượt hơn, chỉ hợp chuyển động chung của khung; với lip-sync thì
   30 fps đã đủ mượt.
 - 4.8.2: đổi fps đột ngột có thể thấy khựng nên phải chuyển dần.
-- 4.8.4 nên làm cùng lúc với việc đánh giá độ cứng của sprite đang chờ ở 4.5.
+- 4.8.4 nên làm cùng lúc với việc đánh giá độ cứng của sprite ở 4.5 (đã đánh giá lần đầu ở 4.7.4: hơi giật khi đổi `neutral` sang `thinking`). Chỉ cần mờ chồng khi đổi biểu cảm (khoảng 150 đến 200 ms, thêm một lớp `<img>` giữ ảnh cũ trong `sprite-stage.tsx`), không cần khi đổi mức miệng hay chớp mắt; tôn trọng `prefers-reduced-motion`. Hạn chế: mờ chồng tạo "bóng ma" của đầu nghiêng trong chừng 0,2 giây, không phải chuyển động thật; nếu chưa đủ thì thêm xoay hoặc dịch nhẹ ảnh bằng CSS transform (có thể làm hở mép nền).
 - Liên quan 4.6 (giảm chi phí mỗi khung) và 4.7 (nhịp thở của tay): nên làm 4.7.2 và 4.8.3 cùng một
   chỗ để khỏi trùng, và đo nhiệt chung ở 4.6.0 và 4.8.0.
 - Ngoài phạm vi: nội suy mức âm phía mobile đã nằm ở bước 5.3.
@@ -692,8 +705,8 @@ file và kích thước, không phải sửa code.
 - Đã kiểm tra: Chrome headless tắt WebGL hiện sprite (0 canvas, ảnh nạp xong), bật WebGL vẫn
   dùng avatar 3D; `tsc` và `vite build` qua; ảnh chụp khớp khung và màu bản 3D.
 - **Chưa kiểm tra:** miệng đổi ảnh theo giọng bot thật (mới kiểm tra ảnh tĩnh); các ngưỡng
-  `SMALL_*`/`WIDE_*` là giá trị đoán ban đầu; trên thiết bị thật; độ cứng của chuyển động
-  khi đổi ảnh (điều kiện "quá cứng thì xem lại Live2D" ở 4.4 chưa đánh giá).
+  `SMALL_*`/`WIDE_*` là giá trị đoán ban đầu; trên thiết bị thật (đã xem sprite trên iPhone ở 4.7.4, xem bên dưới).
+- **Độ cứng khi đổi ảnh (đánh giá ở 4.7.4, 2026-11-14):** tạm ổn, hơi giật khi chuyển từ `neutral` sang `thinking` (ảnh đổi tức thì, không có chuyển mượt), chưa đến mức "quá cứng" nên chưa cần xem lại Live2D (điều kiện ở 4.4). Đây là đánh giá chủ quan, một lần, nên coi là tạm; làm crossfade ở 4.8.4 rồi đánh giá lại.
 - Đã nối: tự hạ từ bậc nhẹ xuống sprite khi fps vẫn thấp (xem 4.3). Nhịp thở bằng vai đã làm ở 4.7.2; chuyển động nhàn rỗi khác (nghiêng đầu) chưa làm.
 
 ## Giấy phép model
