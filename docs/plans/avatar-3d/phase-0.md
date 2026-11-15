@@ -149,7 +149,8 @@ mở `/?avatar-test&model=/avatars/chibi03.vrm` trên Safari. Bản dev không d
 - [x] Đã chọn model, ghi giấy phép và nguồn (0.3): Mocking Spit, **nhưng** nó là
       quái vật một mắt, miệng quá to nên lip-sync khó thấy. Chibi03 hợp hơn về
       hình, biểu cảm và lip-sync nhưng có giấy phép `Redistribution_Prohibited`.
-      **Chưa chốt model dùng cho phase 1.**
+      **Đã chốt sau đó (ghi bổ sung 2026-11-15): dùng `AvatarSample_E`** (giấy phép
+      đã kiểm tra, xem README và phase-4.md). Mocking Spit không còn là model chính.
 - [x] Trang thử avatar chạy: thở, chớp mắt, nhìn theo con trỏ (0.4).
 - [x] Font tiếng Việt đủ (0.5).
 - [x] Có số liệu fps đầu tiên trên iPhone (0.6), còn thiếu pin chính xác và 10 phút.

@@ -74,7 +74,7 @@ theo nhịp màn hình.
 ## Kết quả rà biện pháp (bước 4.2)
 
 Model đang dùng: `AvatarSample_E.vrm` (đặt bằng `VITE_AVATAR_URL` trong
-`apps/web/.env.local`; mặc định của code là `Mocking_Spit_Strawberry.vrm`).
+`apps/web/.env.local`; mặc định của code là `AvatarSample_E.web.vrm` từ 2026-11-15, trước đó là `Mocking_Spit_Strawberry.vrm`).
 
 Số liệu model E: 17,5 MB; 3 mesh (Face 3.150 tam giác, Body 11.880, Hair 11.676,
 tổng ~27k); 95 primitive; 16 material MToon; Hair có ~729k đỉnh cho 11,7k tam giác.
@@ -603,7 +603,7 @@ Tư thế hai tay đối xứng ở má bị thấy giống ngạc nhiên hơn �
 
 ### Kết quả bước 4.7.4 (khung camera và chụp lại sprite)
 
-- **Sprite chụp lại (2026-11-14):** cả 16 ảnh chụp bằng `node tools/capture-sprites.mjs` (model mặc định `Mocking_Spit_Strawberry`). Bộ cũ chụp ngày 2026-11-03, trước 4.7, tay còn dang gần chữ T nên lệch bản 3D. Mọi ảnh dùng chung tư thế nghỉ `REST_ARM`.
+- **Sprite chụp lại (2026-11-14):** cả 16 ảnh chụp bằng `node tools/capture-sprites.mjs` (model lấy từ `VITE_AVATAR_URL` trong `.env.local`, tức `AvatarSample_E`; ghi chú trước đây "model mặc định `Mocking_Spit_Strawberry`" là sai, đối chiếu bằng mắt 2026-11-15: ảnh sprite cùng nhân vật với bản 3D `AvatarSample_E`; chưa kiểm tra lại lệnh chụp). Bộ cũ chụp ngày 2026-11-03, trước 4.7, tay còn dang gần chữ T nên lệch bản 3D. Mọi ảnh dùng chung tư thế nghỉ `REST_ARM`.
 - **Sprite `thinking` giữ tay nghỉ (cách A của quyết định 2):** `sprite-capture.tsx` luôn dùng tay của `AVATAR_POSES.speaking`, nên không ảnh nào có tay chống cằm. Đã chụp thử tay chống cằm cho ba ảnh `thinking` (cách B của quyết định 2, không phải "Hướng B" Mixamo bên dưới) vào thư mục tạm và so bằng mắt: tay không che miệng ở cả ba mức, trông "đang nghĩ" rõ hơn. Không chọn vì ảnh `thinking-*` dùng chung cho trạng thái `thinking` và cho thẻ biểu cảm `thinking` khi bot nói, còn bản 3D chỉ nâng tay ở trạng thái `thinking` (thẻ chỉ đổi đầu và mắt, quyết định 3). Chọn B thì hai bậc lệch nhau ở lúc bot nói, và sprite không có chuyển động tay mượt như bản 3D.
 - **Lỗi `neutral-closed` và cách sửa:** ảnh đầu tiên được dựng ra có viền váy nâng và nghiêng, lặp lại giống hệt (cùng md5) qua hai lần chụp. Do spring bones của váy chưa rời bind pose (suy luận, sửa có hiệu quả nhưng chưa đo trực tiếp). `sprite-capture.tsx` nay dựng một ảnh bỏ đi trước khi chụp thật; ảnh chụp lại cho viền váy phẳng như 15 ảnh còn lại.
 - **Khung `frameUpperBody`:** không sửa. Bề ngang lấy theo khoảng cách vai nhân `ARM_ROOM` (4), chứa được cả tay `thinking` ở khung hẹp. Viền váy bị cắt phẳng ở đáy ảnh ở cả 16 ảnh (cùng khung nửa người trên, `UPPER_BODY` 0,62); bản 3D cũng cắt, nên không coi là lỗi.
@@ -612,7 +612,7 @@ Tư thế hai tay đối xứng ở má bị thấy giống ngạc nhiên hơn �
   - Chụp headless bản 3D (`/?avatar-expression`, khung điện thoại 390×844 và desktop 1280×800): tay `thinking` và tay nghỉ nằm trong khung ở `Mocking_Spit_Strawberry`, `AvatarSample_D`, `AvatarSample_E`; không thấy xuyên thân.
   - iPhone qua Tailscale, bản build mới: `neutral-closed`, `neutral-wide`, `thinking-small`, `blink` đạt (tay hạ xuống, không cắt ở mép ngang, viền váy cắt phẳng ở đáy).
   - Bậc sprite trong app với bot thật (`/?tier=sprite`): ảnh đổi theo giọng, tạm ổn. Đổi từ `neutral` sang `thinking` hơi giật vì ảnh đổi tức thì (chưa có crossfade); xử lý ở 4.8.4.
-- **Chưa kiểm tra:** `chibi03` (khung chỉ thấy đầu và vầng hào quang, không thấy tay; có từ trước 4.7, có thể cần khung riêng cho model đầu to); bộ sprite cho model khác (hiện chỉ có cho model mặc định); 12 ảnh còn lại trên iPhone (chỉ xem 4 ảnh); viền váy bị cắt sát đáy ở 3D khung desktop có chấp nhận được không (chưa quyết); độ giật khi đổi biểu cảm ở các cặp khác ngoài `neutral` sang `thinking`.
+- **Chưa kiểm tra:** `chibi03` (khung chỉ thấy đầu và vầng hào quang, không thấy tay; có từ trước 4.7, có thể cần khung riêng cho model đầu to); bộ sprite cho model khác (hiện chỉ có cho `AvatarSample_E`); 12 ảnh còn lại trên iPhone (chỉ xem 4 ảnh); viền váy bị cắt sát đáy ở 3D khung desktop có chấp nhận được không (chưa quyết); độ giật khi đổi biểu cảm ở các cặp khác ngoài `neutral` sang `thinking`.
 
 ### Hướng B (để phát triển sau, chưa làm)
 

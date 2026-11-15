@@ -104,8 +104,10 @@ hiện dòng báo.
 ### Chưa kiểm tra
 
 - Chưa đo fps khi gọi bot (WebRTC, audio chạy song song với canvas).
-- Chưa chốt model dùng lâu dài (xem phase 0.3); Mocking Spit luôn há miệng rộng
-  nên lip-sync ở phase 2 sẽ khó thấy.
+- ~~Chưa chốt model dùng lâu dài~~ Đã chốt `AvatarSample_E` (xem mục "Cập nhật sau phase 4"). Ghi chú
+  "Mocking Spit luôn há miệng rộng nên lip-sync khó thấy" là về Mocking Spit; chưa có ghi chép nào về độ rõ
+  của lip-sync trên `AvatarSample_E` (phase 2.4 không nói đã thử với model nào, và nhiều khả năng là Mocking
+  Spit, vốn là mặc định lúc đó).
 - `avatar-test.tsx` còn lặp ~40 dòng chuẩn bị model với `avatar-stage`; chưa gộp.
 
 ## Xong phase 1
@@ -123,8 +125,8 @@ Phần "Kết quả" ở trên là ghi chép lúc làm phase 1, giữ nguyên nh
 
 - **Khung hình (1.1):** không còn lấy 85% bề ngang. `frameUpperBody` trong `vrm-frame.ts` lấy bề ngang theo khoảng cách vai nhân `ARM_ROOM` (4) và chiều cao theo `UPPER_BODY` (0,62) (4.7.4).
 - **Tay (1.1, 1.2):** không còn một góc cố định `ARM_RAD`. Tay do `applyArmPose` và `REST_ARM` điều khiển (4.7.1); có ngón cong nhẹ, nhún vai theo nhịp thở, tay phải chống cằm ở `thinking`, khuỷu và cổ tay nhích theo mức miệng khi nói (4.7.1.1 đến 4.7.3b). `AVATAR_POSES` có thêm trường `armRight`, `sway`, `talk`.
-- **Tư thế (1.2):** góc tay đã được chỉnh ở 4.7. Góc đầu (nghiêng, gật, nhìn) trong `AVATAR_POSES` không đổi từ commit đầu `c500a7b` (2026-10-29), tức chưa chỉnh riêng sau phase 1. Tuy vậy các tư thế đã chạy trong cuộc gọi thật (phase 3 ghi avatar "nghiêng đầu nhìn lên" khi bot gắn thẻ `thinking`) và không có phàn nàn nào về góc được ghi lại. Câu "chưa chỉnh với bot thật" ở trên là của lúc viết 1.2; mục tích "đã thử với bot thật" ở cuối file là kết quả sau đó, nên hai câu không thật sự mâu thuẫn. Chưa có xác nhận bằng lời về độ tự nhiên của từng tư thế.
-- **Model:** mặc định trong code vẫn là `Mocking_Spit_Strawberry.vrm`, nhưng `apps/web/.env.local` đặt `VITE_AVATAR_URL` sang `AvatarSample_E.web.f17b1b4a.vrm`, nên bản chạy dùng `AvatarSample_E`. Các file `.vrm` không nằm trong repo (`public/avatars/*.vrm` bị gitignore); sprite `.webp` thì có trong repo. Chưa chốt model dùng lâu dài.
+- **Tư thế (1.2):** góc tay đã được chỉnh ở 4.7. Góc đầu (nghiêng, gật, nhìn) trong `AVATAR_POSES` không đổi từ commit đầu `c500a7b` (2026-10-29), tức chưa chỉnh riêng sau phase 1. Tuy vậy các tư thế đã chạy trong cuộc gọi thật (phase 3 ghi avatar "nghiêng đầu nhìn lên" khi bot gắn thẻ `thinking`) và không có phàn nàn nào về góc được ghi lại. Câu "chưa chỉnh với bot thật" ở trên là của lúc viết 1.2; mục tích "đã thử với bot thật" ở cuối file là kết quả sau đó, nên hai câu không thật sự mâu thuẫn. Soát ngày 2026-11-15: biên độ góc đầu nhỏ (nghiêng 6° ở `listening`, nghiêng 8° và ngẩng 5° ở `thinking`, gật khoảng 3° ở `connecting` và 1,4° ở `speaking`), mọi góc đi qua `damp` theo `dt`, ảnh tĩnh của `speaking`, `listening`, `thinking` không thấy xuyên thân, cắt khung hay méo mặt (trạng thái `idle` chưa chụp được vì trang thử không có). Độ tự nhiên khi chuyển động liên tục lúc gọi bot thật chưa có đánh giá của người dùng.
+- **Model:** model dùng lâu dài là `AvatarSample_E` (bản chạy qua `apps/web/.env.local`: `VITE_AVATAR_URL=/avatars/AvatarSample_E.web.f17b1b4a.vrm`). Mặc định trong code (`vrm-frame.ts`, `vite.config.ts`, `avatar-test.tsx`) đã đổi từ `Mocking_Spit_Strawberry.vrm` sang `/avatars/AvatarSample_E.web.vrm` để khỏi tải nhầm model khi thiếu `.env.local`. Dòng ở 1.1 ghi mặc định Mocking Spit là của lúc viết phase 1. Các file `.vrm` không nằm trong repo (`public/avatars/*.vrm` bị gitignore); sprite `.webp` thì có trong repo.
 - **Ba bậc thay vì hai (1.3):** nút chuyển vẫn chỉ đổi quả cầu và avatar, nhưng avatar nay có bậc đầy đủ, bậc nhẹ và sprite 2D. Sprite chạy khi không có WebGL, hoặc khi bậc nhẹ vẫn tụt fps (4.3, 4.5).
 - **Nạp lazy (1.4):** `SpriteStage` cũng nạp lazy. Model được tải sớm bằng một `fetch` chèn vào `<head>` từ `vite.config.ts`, và `preload.ts` dùng lại kết quả (4.6.2). Đó không phải `<link rel="preload">` và không preload chunk avatar, nên ý "`index.html` không preload chunk đó" vẫn đúng.
 - **fps khi gọi bot:** vẫn chưa đo. Phase 4 (4.1) đo fps bằng `?avatar-fps` trên iPhone 15 Pro Max (đạt 60 fps, là trần màn hình), nhưng không ghi là đo lúc đang gọi bot, và `phase-4.md` còn ghi "chưa thử khi đang trong cuộc gọi với bot". Nên dòng "chưa đo fps" ở mục "Chưa kiểm tra" vẫn đúng. Nhiệt và pin cũng chưa đo.
