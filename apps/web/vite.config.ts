@@ -9,7 +9,7 @@ const BOT_URL = process.env.BOT_URL ?? 'http://localhost:7860'
 
 // Tải model avatar ngay khi đọc HTML, song song với JS (bước 4.6.2), một lần duy nhất. URL lấy từ VITE_AVATAR_URL để
 // luôn khớp với AVATAR_URL trong src/components/avatar/vrm-frame.ts; giá trị mặc định phải giống ở đó.
-const DEFAULT_AVATAR_URL = '/avatars/Mocking_Spit_Strawberry.vrm'
+const DEFAULT_AVATAR_URL = '/avatars/AvatarSample_E.web.vrm'
 function preloadAvatarModel(): Plugin {
   let url = DEFAULT_AVATAR_URL
   return {

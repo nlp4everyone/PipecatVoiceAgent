@@ -12,7 +12,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 /** Trang thử avatar (phase 0.4): mở bằng `/?avatar-test`, chưa nối với bot. */
 
-const DEFAULT_MODEL = "/avatars/Mocking_Spit_Strawberry.vrm";
+const DEFAULT_MODEL = "/avatars/AvatarSample_E.web.vrm";
 // Góc hạ tay khỏi tư thế chữ T (độ); chỉnh thử bằng `?arm=`.
 const DEFAULT_ARM_DEG = 58;
 

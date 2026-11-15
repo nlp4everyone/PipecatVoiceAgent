@@ -3,7 +3,7 @@ import { Box3, MathUtils, type PerspectiveCamera, SkinnedMesh, Vector3 } from "t
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 /** Model mặc định; đổi bằng biến môi trường `VITE_AVATAR_URL`. File .vrm không nằm trong repo. */
-export const AVATAR_URL = (import.meta.env.VITE_AVATAR_URL as string | undefined) || "/avatars/Mocking_Spit_Strawberry.vrm";
+export const AVATAR_URL = (import.meta.env.VITE_AVATAR_URL as string | undefined) || "/avatars/AvatarSample_E.web.vrm";
 
 // Phần chiều cao model hiện trong khung (từ đỉnh đầu xuống), và hệ số bề ngang so với khoảng cách hai vai.
 const UPPER_BODY = 0.62;
