@@ -13,6 +13,19 @@ apps/web/src/components/
     use-avatar-state.ts     trạng thái hội thoại → animation
 ```
 
+Đây là cấu trúc lúc làm phase 1. Thư mục `avatar/` hiện có thêm nhiều file ở các phase sau:
+
+```
+  avatar/
+    avatar-error-boundary.tsx   rơi về quả cầu khi avatar nạp lỗi
+    preload.ts                  dùng lại model đã tải sớm (4.6.2)
+    quality.ts                  chọn và hạ bậc (4.3)
+    sprite-stage.tsx, sprites.ts   bậc sprite 2D (4.5)
+    vrm-frame.ts                khung camera, tư thế tay (4.7)
+    use-avatar-lipsync.ts       lip-sync (phase 2)
+    avatar-test.tsx, expression-test.tsx, pose-test.tsx, sprite-capture.tsx   trang thử và chụp sprite
+```
+
 `voice-screen.tsx` chọn giữa quả cầu và avatar. `avatar-stage` nạp bằng
 `React.lazy` nên người chỉ dùng quả cầu không phải tải three.js.
 
@@ -103,3 +116,16 @@ hiện dòng báo.
 - [x] 1.4 Nạp lazy, three.js không vào bundle chính.
 - [x] 1.5 Quả cầu vẫn chạy (đã gọi bot thật).
 - [x] Gọi bot thật, avatar đổi tư thế theo trạng thái.
+
+## Cập nhật sau phase 4 (đối chiếu code 2026-11-15)
+
+Phần "Kết quả" ở trên là ghi chép lúc làm phase 1, giữ nguyên như lịch sử. Các điểm dưới đây đã khác với code hiện tại.
+
+- **Khung hình (1.1):** không còn lấy 85% bề ngang. `frameUpperBody` trong `vrm-frame.ts` lấy bề ngang theo khoảng cách vai nhân `ARM_ROOM` (4) và chiều cao theo `UPPER_BODY` (0,62) (4.7.4).
+- **Tay (1.1, 1.2):** không còn một góc cố định `ARM_RAD`. Tay do `applyArmPose` và `REST_ARM` điều khiển (4.7.1); có ngón cong nhẹ, nhún vai theo nhịp thở, tay phải chống cằm ở `thinking`, khuỷu và cổ tay nhích theo mức miệng khi nói (4.7.1.1 đến 4.7.3b). `AVATAR_POSES` có thêm trường `armRight`, `sway`, `talk`.
+- **Tư thế (1.2):** góc tay đã được chỉnh ở 4.7. Góc đầu (nghiêng, gật, nhìn) trong `AVATAR_POSES` không đổi từ commit đầu `c500a7b` (2026-10-29), tức chưa chỉnh riêng sau phase 1. Tuy vậy các tư thế đã chạy trong cuộc gọi thật (phase 3 ghi avatar "nghiêng đầu nhìn lên" khi bot gắn thẻ `thinking`) và không có phàn nàn nào về góc được ghi lại. Câu "chưa chỉnh với bot thật" ở trên là của lúc viết 1.2; mục tích "đã thử với bot thật" ở cuối file là kết quả sau đó, nên hai câu không thật sự mâu thuẫn. Chưa có xác nhận bằng lời về độ tự nhiên của từng tư thế.
+- **Model:** mặc định trong code vẫn là `Mocking_Spit_Strawberry.vrm`, nhưng `apps/web/.env.local` đặt `VITE_AVATAR_URL` sang `AvatarSample_E.web.f17b1b4a.vrm`, nên bản chạy dùng `AvatarSample_E`. Các file `.vrm` không nằm trong repo (`public/avatars/*.vrm` bị gitignore); sprite `.webp` thì có trong repo. Chưa chốt model dùng lâu dài.
+- **Ba bậc thay vì hai (1.3):** nút chuyển vẫn chỉ đổi quả cầu và avatar, nhưng avatar nay có bậc đầy đủ, bậc nhẹ và sprite 2D. Sprite chạy khi không có WebGL, hoặc khi bậc nhẹ vẫn tụt fps (4.3, 4.5).
+- **Nạp lazy (1.4):** `SpriteStage` cũng nạp lazy. Model được tải sớm bằng một `fetch` chèn vào `<head>` từ `vite.config.ts`, và `preload.ts` dùng lại kết quả (4.6.2). Đó không phải `<link rel="preload">` và không preload chunk avatar, nên ý "`index.html` không preload chunk đó" vẫn đúng.
+- **fps khi gọi bot:** đã đo ở phase 4 (4.1; iPhone 15 Pro Max đạt 60 fps, là trần màn hình), nên dòng "chưa đo fps" ở mục "Chưa kiểm tra" không còn đúng. Chưa đo nhiệt và pin.
+- **Code lặp:** `avatar-test.tsx` vẫn dùng `GLTFLoader` trực tiếp còn `avatar-stage.tsx` dùng `AvatarLoader`; chưa gộp. Chưa đếm lại số dòng lặp.
