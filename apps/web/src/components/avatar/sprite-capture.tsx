@@ -124,6 +124,9 @@ async function capture(onProgress: (done: number, total: number) => void) {
   const list = shots();
   const result: Record<string, string> = {};
   let done = 0;
+  // Dựng một ảnh bỏ đi trước để spring bones (váy, tóc) rời bind pose; không thì ảnh đầu tiên bị váy nâng lệch.
+  const first = list[ALL_SPRITES[0]];
+  if (first) applyShot(vrm, first, look, cam);
   for (const name of ALL_SPRITES) {
     const shot = list[name];
     if (!shot) throw new Error(`thiếu cấu hình chụp cho ${name}`);
