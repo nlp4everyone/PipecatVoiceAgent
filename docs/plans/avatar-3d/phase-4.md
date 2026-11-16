@@ -486,6 +486,10 @@ tốn rõ rệt fps ở bậc nhẹ; khung camera không cắt tay; sprite khớ
 4. ~~**Nhịp thở**~~ **Đã chốt (2026-11-12):** phương án 1, giữ `chest.rotation.x` hiện tại và thêm vai (`leftShoulder`, `rightShoulder`) nhún nhẹ bằng bone, dùng chung `pose.breath`. Thở bằng CSS cho cả khung (4.8.3) để quyết sau, dựa trên số đo ở 4.8.0; chỉ đáng làm nếu muốn bậc sprite cũng có chuyển động thở.
 5. ~~**Tay theo mức miệng**~~ **Đã chốt (2026-11-12):** phương án 2. Lấy mức mở miệng (tổng hoặc max các viseme), làm mượt bằng `damp` chậm hơn miệng (khoảng 3 đến 4), rồi cho khuỷu và cổ tay nhích lên vài độ theo mức đó; không động cánh tay trên (dễ xuyên thân). Phải đưa phép tính miệng lên trước phần tay trong `useFrame` và nhân hệ số `k` khi tắt mic. Giá trị khởi đầu do tôi đặt, chỉnh bằng thanh trượt trên trang debug (4.7.0.2). Phương án 3 (cử chỉ theo nhịp nhấn) để dành nếu sau đó thấy tay còn đơn điệu.
 
+### Ghi chú: tư thế tay tách khỏi `vrm-frame.ts` (2026-11-15)
+
+`ArmPose`, `REST_ARM` và `ARM_RAD` nay được định nghĩa ở `components/avatar/arm-pose.ts` (không import three) và `vrm-frame.ts` re-export chúng, nên các chỗ import từ `vrm-frame.ts` trong mục 4.7 vẫn đúng. Lý do: bước 4.7.0.1 (`3201fc8`) đã làm `use-avatar-state.ts` import giá trị từ `vrm-frame.ts`, kéo three vào bundle chính qua `voice-screen.tsx`; chi tiết và cách kiểm tra ở `phase-1.md` mục "Nạp lazy (1.4)". Các số đo tải ở 4.6 (11-08 đến 11-10) có trước `3201fc8`, nên đo trong điều kiện bundle chính chưa có three.
+
 ### Kết quả bước 4.7.0.2 (trang debug và trục xoay)
 
 Trang `/?avatar-pose` (`components/avatar/pose-test.tsx`, đăng ký ở `main.tsx`): ba thanh trượt x/y/z (độ) cho vai, cánh tay trên, khuỷu và cổ tay; ô "Đối xứng bên phải", ô "Hiện trục" (AxesHelper gắn vào bone), chọn thứ tự Euler, ba góc nhìn (front/side/top) và OrbitControls. Ô cuối panel hiện chuỗi URL của tư thế hiện tại để dán lại. Tham số URL: `shoulder`, `upper`, `lower`, `hand` (dạng `x,y,z`), `order`, `mirror=0`, `axes=1`, `view`, `cam`, `target`. Trang đặt thẳng `rotation` của bone, không qua `applyArmPose`.
@@ -704,6 +708,7 @@ file và kích thước, không phải sửa code.
   viseme lại rồi chia ngưỡng có độ trễ, cập nhật 20 lần/giây.
 - Đã kiểm tra: Chrome headless tắt WebGL hiện sprite (0 canvas, ảnh nạp xong), bật WebGL vẫn
   dùng avatar 3D; `tsc` và `vite build` qua; ảnh chụp khớp khung và màu bản 3D.
+- **Bậc sprite vẫn tải `three.core` (kiểm tra bằng build, 2026-11-15; chưa xử lý):** `sprite-stage.tsx` import `use-avatar-lipsync.ts`, file này import `MathUtils` từ `three`, nên chunk sprite kéo theo `three.core-*.js` (khoảng 377 KB). Điều này có từ trước 4.7 (đã thấy ở bản build `fe46427`), nên ý "bậc sprite không tải three.js" (comment ở `voice-screen.tsx` và lý do chọn sprite ở 4.4) chưa đúng hoàn toàn. Chưa sửa.
 - **Chưa kiểm tra:** miệng đổi ảnh theo giọng bot thật (mới kiểm tra ảnh tĩnh); các ngưỡng
   `SMALL_*`/`WIDE_*` là giá trị đoán ban đầu; trên thiết bị thật (đã xem sprite trên iPhone ở 4.7.4, xem bên dưới).
 - **Độ cứng khi đổi ảnh (đánh giá ở 4.7.4, 2026-11-14):** tạm ổn, hơi giật khi chuyển từ `neutral` sang `thinking` (ảnh đổi tức thì, không có chuyển mượt), chưa đến mức "quá cứng" nên chưa cần xem lại Live2D (điều kiện ở 4.4). Đây là đánh giá chủ quan, một lần, nên coi là tạm; làm crossfade ở 4.8.4 rồi đánh giá lại.
