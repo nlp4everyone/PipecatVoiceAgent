@@ -2,6 +2,11 @@ import { type VRM, VRMUtils } from "@pixiv/three-vrm";
 import { Box3, MathUtils, type PerspectiveCamera, SkinnedMesh, Vector3 } from "three";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 
+import type { ArmPose } from "./arm-pose";
+
+// Định nghĩa ở arm-pose.ts (không có three) để bundle chính không kéo three vào; re-export để chỗ khác import như cũ.
+export { ARM_RAD, type ArmPose, REST_ARM } from "./arm-pose";
+
 /** Model mặc định; đổi bằng biến môi trường `VITE_AVATAR_URL`. File .vrm không nằm trong repo. */
 export const AVATAR_URL = (import.meta.env.VITE_AVATAR_URL as string | undefined) || "/avatars/AvatarSample_E.web.vrm";
 
@@ -12,60 +17,8 @@ const ARM_ROOM = 4;
 const TALK_HAND_RATIO = 0.6;
 /** Biên độ nhún vai so với biên độ ngực (`pose.breath.amp`); giá trị khởi đầu, chỉnh bằng mắt (4.7.2). */
 export const SHOULDER_BREATH_GAIN = 6;
-/** Góc hạ tay khỏi tư thế chữ T (radian). */
-export const ARM_RAD = MathUtils.degToRad(58);
-
-/**
- * Tư thế một tay (góc radian, dùng cho cả hai bên: bên phải đảo dấu y và z, giữ x).
- * Trục đo ở 4.7.0.2 (docs/plans/avatar-3d/phase-4.md): z của vai và cánh tay trên là hạ xuống;
- * x của cánh tay trên dương là đưa ra trước (cả hai bên); y của khuỷu và cổ tay âm là gập ra trước; z của khuỷu dương là đưa vào phía thân; z của ngón dương là cong về lòng bàn tay
- * (đo ở 4.7.1.1).
- */
-export interface ArmPose {
-  /** Vai: dương là hạ vai, âm là nhún lên (trục z). */
-  shoulderZ: number;
-  /** Hạ cánh tay trên khỏi tư thế chữ T (trục z). */
-  upperZ: number;
-  /** Đưa cánh tay trên ra trước (x dương là ra trước và lên, đo ở 4.7.3a.1). Cùng dấu cho cả hai bên. */
-  upperX: number;
-  /** Khuỷu gập ra trước (y, âm là gập) và đưa vào thân (z, dương). */
-  lowerY: number;
-  lowerZ: number;
-  /** Cổ tay gập ra trước (y, âm là gập). */
-  handY: number;
-  /** Ngón cong về phía lòng bàn tay (z dương) ở đốt gần, đốt giữa, đốt xa của bốn ngón dài, và ngón cái. */
-  fingerProximal: number;
-  fingerIntermediate: number;
-  fingerDistal: number;
-  thumb: number;
-  /**
-   * Ngón cái vắt ngang lòng bàn tay (đo ở 4.7.3a.1): đốt gốc xoay y dương là đưa về phía ngón út, z là cong;
-   * đốt cuối cong theo z. Cả ba đều 0 ở tư thế nghỉ. Dấu y và z đảo cho tay phải như các trường khác.
-   */
-  thumbMetacarpalY: number;
-  thumbMetacarpalZ: number;
-  thumbDistal: number;
-}
 
 const FINGERS = ["Index", "Middle", "Ring", "Little"] as const;
-
-/** Tư thế nghỉ (4.7.1): hạ tay bằng cả vai và cánh tay, gập nhẹ khuỷu, cổ tay thả lỏng. Giá trị khởi đầu, chỉnh bằng mắt. */
-export const REST_ARM: ArmPose = {
-  shoulderZ: MathUtils.degToRad(6),
-  upperZ: MathUtils.degToRad(55),
-  upperX: 0,
-  lowerY: MathUtils.degToRad(-8),
-  lowerZ: MathUtils.degToRad(3),
-  handY: MathUtils.degToRad(-3),
-  // Giá trị khởi đầu (4.7.1.1), chỉnh bằng mắt trên trang debug.
-  fingerProximal: MathUtils.degToRad(15),
-  fingerIntermediate: MathUtils.degToRad(20),
-  fingerDistal: MathUtils.degToRad(10),
-  thumb: MathUtils.degToRad(8),
-  thumbMetacarpalY: 0,
-  thumbMetacarpalZ: 0,
-  thumbDistal: 0,
-};
 
 /** Đưa `cur` về `target` từng trường một bằng `damp` (sửa trực tiếp `cur`), để tay chuyển mượt giữa các trạng thái (4.7.3a). */
 export function dampArm(cur: ArmPose, target: ArmPose, lambda: number, dt: number) {

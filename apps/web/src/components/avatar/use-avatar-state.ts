@@ -2,7 +2,7 @@ import { useRef } from "react";
 
 import type { OrbState } from "@/components/chat-orb";
 
-import { type ArmPose, REST_ARM } from "./vrm-frame";
+import { type ArmPose, REST_ARM } from "./arm-pose";
 
 /** Tư thế đích của avatar cho một trạng thái hội thoại. Góc tính bằng radian. */
 export interface AvatarPose {
