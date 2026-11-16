@@ -1,9 +1,4 @@
-import {
-  type VRM,
-  VRMLookAtExpressionApplier,
-  VRMLookAtRangeMap,
-  VRMUtils,
-} from "@pixiv/three-vrm";
+import { type VRM, VRMUtils } from "@pixiv/three-vrm";
 import { PerformanceMonitor } from "@react-three/drei";
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import { Component, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -21,7 +16,7 @@ import {
   MOUTH_SORROW_OVERLAP,
   useAvatarPose,
 } from "./use-avatar-state";
-import { applyArmPose, type ArmPose, AVATAR_URL, dampArm, frameUpperBody, prepareVrm, REST_ARM, SHOULDER_BREATH_GAIN } from "./vrm-frame";
+import { applyArmPose, type ArmPose, AVATAR_URL, dampArm, frameUpperBody, prepareVrm, REST_ARM, SHOULDER_BREATH_GAIN, setupLookAt } from "./vrm-frame";
 
 // Expression cảm xúc do avatar-stage tự điều khiển; miệng do `useAvatarLipsync`.
 /**
@@ -226,18 +221,7 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
   // Chuẩn bị model một lần rồi đặt camera nửa người trên.
   useEffect(() => {
     prepareVrm(gltf, vrm);
-    // Model không có xương mắt thì nhìn bằng expression lookUp/Down/Left/Right (tối đa 30°).
-    if (vrm.lookAt && vrm.expressionManager) {
-      const range = () => new VRMLookAtRangeMap(30, 1);
-      vrm.lookAt.applier = new VRMLookAtExpressionApplier(
-        vrm.expressionManager,
-        range(),
-        range(),
-        range(),
-        range(),
-      );
-      vrm.lookAt.target = lookTarget;
-    }
+    setupLookAt(vrm, lookTarget);
     cam.current = frameUpperBody(vrm, camera as PerspectiveCamera);
     onReady?.();
     return () => VRMUtils.deepDispose(vrm.scene);

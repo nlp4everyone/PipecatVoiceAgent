@@ -1,5 +1,5 @@
-import { type VRM, VRMUtils } from "@pixiv/three-vrm";
-import { Box3, MathUtils, type PerspectiveCamera, SkinnedMesh, Vector3 } from "three";
+import { type VRM, VRMLookAtExpressionApplier, VRMLookAtRangeMap, VRMUtils } from "@pixiv/three-vrm";
+import { Box3, MathUtils, type Object3D, type PerspectiveCamera, SkinnedMesh, Vector3 } from "three";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import type { ArmPose } from "./arm-pose";
@@ -71,6 +71,14 @@ export function prepareVrm(gltf: GLTF, vrm: VRM) {
   vrm.scene.traverse((o) => {
     o.frustumCulled = false;
   });
+}
+
+/** Model không có xương mắt thì nhìn bằng expression lookUp/Down/Left/Right (tối đa 30°); `target` là điểm để nhìn theo. */
+export function setupLookAt(vrm: VRM, target: Object3D) {
+  if (!vrm.lookAt || !vrm.expressionManager) return;
+  const range = () => new VRMLookAtRangeMap(30, 1);
+  vrm.lookAt.applier = new VRMLookAtExpressionApplier(vrm.expressionManager, range(), range(), range(), range());
+  vrm.lookAt.target = target;
 }
 
 /**

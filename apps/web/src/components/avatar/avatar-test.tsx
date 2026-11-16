@@ -1,14 +1,9 @@
-import {
-  VRM,
-  VRMLoaderPlugin,
-  VRMLookAtExpressionApplier,
-  VRMLookAtRangeMap,
-  VRMUtils,
-} from "@pixiv/three-vrm";
+import { type VRM, VRMUtils } from "@pixiv/three-vrm";
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Box3, MathUtils, Object3D, type PerspectiveCamera, SkinnedMesh, Vector3 } from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { AvatarLoader, registerVrm } from "./preload";
+import { prepareVrm, setupLookAt } from "./vrm-frame";
 
 /** Trang thử avatar (phase 0.4): mở bằng `/?avatar-test`, chưa nối với bot. */
 
@@ -126,9 +121,7 @@ interface AvatarProps {
 
 function Avatar({ url, targetRef, onExpressions }: AvatarProps) {
   const { camera } = useThree();
-  const gltf = useLoader(GLTFLoader, url, (loader) => {
-    loader.register((parser) => new VRMLoaderPlugin(parser));
-  });
+  const gltf = useLoader(AvatarLoader, url, registerVrm);
   const vrm = gltf.userData.vrm as VRM;
   const lookTarget = useMemo(() => new Object3D(), []);
   const blink = useRef({ next: 2, t: -1 });
@@ -139,25 +132,8 @@ function Avatar({ url, targetRef, onExpressions }: AvatarProps) {
 
   // Chuẩn bị model một lần: bỏ đỉnh thừa, quay VRM 0.x về hướng +z, đặt camera nửa người trên.
   useEffect(() => {
-    VRMUtils.removeUnnecessaryVertices(gltf.scene);
-    VRMUtils.combineSkeletons(gltf.scene);
-    VRMUtils.rotateVRM0(vrm);
-    vrm.scene.traverse((o) => {
-      o.frustumCulled = false;
-    });
-    // Không có xương mắt thì dùng expression lookUp/Down/Left/Right để nhìn.
-    if (vrm.lookAt && vrm.expressionManager) {
-      // Góc nhìn tối đa 30° ứng với expression = 1.
-      const range = () => new VRMLookAtRangeMap(30, 1);
-      vrm.lookAt.applier = new VRMLookAtExpressionApplier(
-        vrm.expressionManager,
-        range(),
-        range(),
-        range(),
-        range(),
-      );
-      vrm.lookAt.target = lookTarget;
-    }
+    prepareVrm(gltf, vrm);
+    setupLookAt(vrm, lookTarget);
     onExpressions(Object.keys(vrm.expressionManager?.expressionMap ?? {}));
 
     // Khung nửa người trên: đỉnh đầu ở sát mép trên. Chibi đầu rất to nên đầu chiếm ~2/3 chiều cao, cần ~95% mới thấy tới hông và hai tay.
