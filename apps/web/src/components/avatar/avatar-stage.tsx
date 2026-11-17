@@ -27,6 +27,8 @@ import { applyArmPose, type ArmPose, AVATAR_URL, dampArm, frameUpperBody, prepar
 const ARM_DAMP = 5;
 /** Độ nhanh làm mượt mức miệng dùng cho tay (chậm hơn miệng, 4.7.3b). */
 const TALK_DAMP = 3.5;
+/** Con trỏ đứng yên quá ngần này (giây) thì avatar thôi nhìn theo và quay về nhìn giữa. */
+const POINTER_IDLE_S = 2;
 const EMOTIONS = ["happy", "relaxed", "sad", "surprised"] as const;
 interface AvatarStageProps {
   state: OrbState;
@@ -217,6 +219,8 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
     new URLSearchParams(location.search).get("mouth") === "sim" ? { aa: 0, ih: 0, ou: 0, ee: 0, oh: 0 } : null,
   );
   const cam = useRef({ y: 0, z: 0 });
+  // Lần cuối con trỏ đổi vị trí; `frame.pointer` giữ nguyên toạ độ cuối nên phải tự phát hiện lúc nó đứng yên.
+  const pointerSeen = useRef({ x: 0, y: 0, at: 0 });
 
   // Chuẩn bị model một lần rồi đặt camera nửa người trên.
   useEffect(() => {
@@ -271,7 +275,15 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
     }
 
     // Điểm nhìn: con trỏ khi chưa gọi, còn lại là điểm lệch so với camera theo tư thế.
-    const { x: px, y: py } = frame.pointer;
+    const ptr = pointerSeen.current;
+    if (frame.pointer.x !== ptr.x || frame.pointer.y !== ptr.y) {
+      ptr.x = frame.pointer.x;
+      ptr.y = frame.pointer.y;
+      ptr.at = t;
+    }
+    const pointerActive = t - ptr.at < POINTER_IDLE_S;
+    const px = pointerActive ? ptr.x : 0;
+    const py = pointerActive ? ptr.y : 0;
     const gx = pose.followPointer ? px * 1.5 : pose.gaze.x;
     const gy = cam.current.y + (pose.followPointer ? py * 0.8 : pose.gaze.y);
     lookTarget.position.x = MathUtils.damp(lookTarget.position.x, gx, 5, dt);
