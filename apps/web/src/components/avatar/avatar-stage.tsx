@@ -171,7 +171,7 @@ function FrameDriver({
       frames++;
       if (showFps && now - since >= 1000) {
         const el = document.getElementById("avatar-fps");
-        if (el) el.textContent = `${tier} ${Math.round((frames * 1000) / (now - since))}/${Number.isFinite(target) ? target : "max"} fps`;
+        if (el) el.textContent = `${tier} ${Math.round((frames * 1000) / (now - since))}/${Number.isFinite(target) ? target : "max"} fps · cores ${navigator.hardwareConcurrency} · mem ${(navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? "n/a"}`;
         frames = 0;
         since = now;
       }

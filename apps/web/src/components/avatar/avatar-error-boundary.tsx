@@ -1,7 +1,7 @@
 import { Component, type ReactNode } from "react";
 
 interface Props {
-  onError: () => void;
+  onError: (error: unknown) => void;
   children: ReactNode;
 }
 
@@ -15,7 +15,7 @@ export class AvatarErrorBoundary extends Component<Props, { failed: boolean }> {
 
   componentDidCatch(error: unknown) {
     console.error("Avatar lỗi:", error);
-    this.props.onError();
+    this.props.onError(error);
   }
 
   render() {

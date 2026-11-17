@@ -84,6 +84,8 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
   const [visual, setVisual] = useState<Visual>(loadVisual);
   const [avatarReady, setAvatarReady] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
+  // Chi tiết lỗi chỉ hiện khi mở bằng `?avatar-fps`, để đọc được trên iPhone (không có console).
+  const [avatarErrorDetail, setAvatarErrorDetail] = useState("");
   const [expression, setExpression] = useState<ExpressionTag | null>(null);
   const wasReadyRef = useRef(false);
 
@@ -192,7 +194,11 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
       // không lưu được thì lần sau dùng mặc định
     }
   };
-  const handleAvatarError = useCallback(() => setAvatarError(true), []);
+  const handleAvatarError = useCallback((error?: unknown) => {
+    setAvatarError(true);
+    const e = error as { stack?: string; message?: string } | undefined;
+    setAvatarErrorDetail(String(e?.stack ?? e?.message ?? error ?? "").slice(0, 600));
+  }, []);
   const handleAvatarReady = useCallback(() => setAvatarReady(true), []);
 
   const handleStart = () => {
@@ -287,6 +293,9 @@ export function VoiceScreen({ onConnect, onDisconnect, error }: VoiceScreenProps
             {visual === "avatar" && avatarError && (
               <p className="max-w-md text-center text-sm text-muted-foreground" role="status">
                 Không tải được avatar, đang dùng quả cầu.
+                {avatarErrorDetail && new URLSearchParams(location.search).has("avatar-fps") && (
+                  <span className="mt-1 block whitespace-pre-wrap break-all font-mono text-xs">{avatarErrorDetail}</span>
+                )}
               </p>
             )}
             {error && (
