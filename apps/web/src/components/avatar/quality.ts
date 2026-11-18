@@ -83,8 +83,11 @@ export function pickInitialTier(): Tier {
   }
   const nav = navigator as Navigator & { deviceMemory?: number };
   const cores = nav.hardwareConcurrency ?? 4;
-  const memory = nav.deviceMemory ?? 4;
-  return cores <= 4 || memory <= 4 ? "light" : "full";
+  // Safari/Firefox không có deviceMemory: "không biết" không được tính là máy yếu.
+  // Máy 3-4 lõi vẫn bắt đầu ở bậc đầy đủ, nếu tụt fps thì `downgrade` sẽ hạ và nhớ lại.
+  const memory = nav.deviceMemory;
+  const weak = (memory !== undefined && memory <= 4) || cores <= 2;
+  return weak ? "light" : "full";
 }
 
 /** Bậc hiện tại và hàm hạ bậc (nhớ lại để lần sau khỏi phải tụt fps rồi mới hạ). */
