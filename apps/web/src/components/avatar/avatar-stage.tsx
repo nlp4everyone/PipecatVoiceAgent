@@ -9,7 +9,7 @@ import type { OrbState } from "@/components/chat-orb";
 import { cn } from "@/lib/utils";
 
 import { useAvatarLipsync, VISEMES } from "./use-avatar-lipsync";
-import { fpsOverride, TIERS, type TierConfig, useTier } from "./quality";
+import { fpsOverride, outlineOverride, TIERS, type TierConfig, useTier } from "./quality";
 import {
   type ExpressionTag,
   MOUTH_JOY_OVERLAP,
@@ -61,10 +61,11 @@ export default function AvatarStage({
   const { tier, downgrade } = useTier();
   const override = useMemo(fpsOverride, []);
   // `?fps=` ép cả fps lúc gọi lẫn lúc chờ để đo sức máy; khi đó tắt tự hạ bậc cho khỏi làm sai số đo.
-  const config = useMemo(
-    () => (override === null ? TIERS[tier] : { ...TIERS[tier], fps: override, idleFps: override }),
-    [tier, override],
-  );
+  const outline = useMemo(outlineOverride, []);
+  const config = useMemo(() => {
+    const base = override === null ? TIERS[tier] : { ...TIERS[tier], fps: override, idleFps: override };
+    return outline === null ? base : { ...base, outline };
+  }, [tier, override, outline]);
   const showFps = useMemo(() => new URLSearchParams(location.search).has("avatar-fps"), []);
   const [modelReady, setModelReady] = useState(false);
   const handleReady = useCallback(() => {
@@ -231,12 +232,17 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
     return () => VRMUtils.deepDispose(vrm.scene);
   }, [gltf, vrm, camera, lookTarget, onReady]);
 
-  // Bậc nhẹ: ẩn các lượt vẽ outline của MToon (three-vrm tạo một material outline riêng cho mỗi mesh).
+  // Ẩn các lượt vẽ outline của MToon (three-vrm tạo một material outline riêng cho mỗi mesh): bậc nhẹ ẩn hết;
+  // vật liệu vải (`_CLOTH`) luôn ẩn trừ khi ép `?outline=1`, vì outline của váy tranh độ sâu với outline của da
+  // ở chỗ tay áo ép sát thân váy, ra viền chấm đứt trên iPhone (AvatarSample_E, bậc đầy đủ).
   useEffect(() => {
+    const forced = outlineOverride();
     vrm.scene.traverse((o) => {
       if (!(o instanceof Mesh)) return;
       for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
-        if ((m as { isOutline?: boolean }).isOutline) m.visible = config.outline;
+        if (!(m as { isOutline?: boolean }).isOutline) continue;
+        const cloth = /_CLOTH\b/.test(m.name) && forced !== true;
+        m.visible = config.outline && !cloth;
       }
     });
   }, [vrm, config.outline]);

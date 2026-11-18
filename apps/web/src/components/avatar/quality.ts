@@ -33,6 +33,12 @@ export function fpsOverride(): number | null {
   return n === 0 ? Number.POSITIVE_INFINITY : n;
 }
 
+/** Ép bật/tắt outline để tách lỗi hình: `?outline=0` tắt, `?outline=1` bật; không có thì theo bậc. Chỉ để chẩn đoán. */
+export function outlineOverride(): boolean | null {
+  const raw = new URLSearchParams(location.search).get("outline");
+  return raw === "0" ? false : raw === "1" ? true : null;
+}
+
 /** Máy có WebGL không (kiểm tra bằng cách tạo thử một context, kết quả nhớ lại). */
 let webglOk: boolean | undefined;
 export function hasWebGL(): boolean {
