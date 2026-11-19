@@ -30,7 +30,8 @@ import { cn } from "@/lib/utils";
 
 // Nạp lazy để người chỉ dùng quả cầu không phải tải three.js.
 const AvatarStage = lazy(() => import("@/components/avatar/avatar-stage"));
-// Bậc dự phòng 2D khi không có WebGL; nạp riêng nên máy đó không tải three.js.
+// Bậc dự phòng 2D khi không có WebGL; nạp riêng. Chunk này vẫn kéo `three.core` (~377 KB) vì `use-avatar-lipsync.ts`
+// import `MathUtils` từ `three` (xem phase-2.md); chưa sửa.
 const SpriteStage = lazy(() => import("@/components/avatar/sprite-stage"));
 
 type Visual = "orb" | "avatar";
