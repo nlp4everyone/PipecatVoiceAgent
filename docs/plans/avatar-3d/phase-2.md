@@ -48,9 +48,23 @@ Gọi bot thật với giọng "Mai Anh" (`vieneu-v3-turbo`). Nhận xét: miệ
 nhịp ngắt nghỉ; đôi lúc thấy hơi nhanh. Hằng số hiện tại `ATTACK = 35`,
 `RELEASE = 12`, `NOISE_FLOOR = 0.12`, `FULL_LEVEL = 0.5`, `MAX_OPEN = 0.7`.
 
-**Chưa chốt.** Chưa rõ "hơi nhanh" là miệng đóng mở dồn dập hay miệng đi trước
-tiếng. Hướng thử: giảm làm mượt (gợi ý `ATTACK = 20`, `RELEASE = 7`, chưa
-kiểm chứng); nếu miệng đi trước tiếng thì thêm độ trễ nhỏ cho miệng.
+**Đã chốt (2026-11-18), chấp nhận bằng mắt.** Lần ghi gốc ở trên chưa nói dùng model nào (nhiều khả năng là
+Mocking Spit, mặc định lúc đó). Ngày 2026-11-16 người dùng xem lại trên iPhone khi gọi bot thật với
+`AvatarSample_E` (model dùng lâu dài): lip-sync rõ, không quá lệch (nhận xét bằng mắt, chưa đo độ trễ bằng số).
+Giữ nguyên hằng số hiện tại (`ATTACK = 35`, `RELEASE = 12`); gợi ý `ATTACK = 20`, `RELEASE = 7` ở bản ghi gốc
+chưa bao giờ được áp dụng và không còn cần. Phần phần mềm gần như chắc chắn nhỏ (`AnalyserNode` đọc đúng track
+đang phát); phần khó đoán là độ trễ đầu ra âm thanh của máy, nhất là tai nghe Bluetooth, chỉ đo được bằng quay
+chậm từ thiết bị thứ hai. Nếu sau này thấy miệng lệch ở một thiết bị cụ thể thì mới đo lại; hướng sửa là thêm
+độ trễ nhỏ cho miệng. Chi tiết ở `phase-1.md`, mục "Lip-sync trên `AvatarSample_E`".
+
+**Việc tuỳ chọn, hạ ưu tiên (2026-11-19):** `use-avatar-lipsync.ts` import `MathUtils` từ `three` (dùng `clamp` ở dòng 47
+và `damp` ở dòng 96), nên bậc sprite, vốn import file này, kéo theo chunk `three.core` (~377 KB; xem `phase-4.md`,
+mục sprite). Chỉ người vào thẳng bậc sprite mới chịu: máy không có WebGL, hoặc máy đã nhớ là không chạy nổi 3D
+(`quality.ts`, `shouldUseSprite`). Máy tự hạ từ 3D xuống sprite giữa chừng đã tải `three.core` rồi nên không tiết kiệm
+được gì; người chỉ dùng quả cầu không bị ảnh hưởng. **Quyết định: không làm bây giờ.** Nếu làm: thay bằng hai hàm
+`clamp` và `damp` tự viết (`x + (y - x) * (1 - exp(-lambda * dt))`), build để kiểm tra `three.core` đã biến khỏi chunk
+sprite chưa (chưa kiểm tra đường import khác có kéo `three` hay không), rồi xem lại lip-sync trên thiết bị vì sai công
+thức sẽ đổi cảm giác miệng mà không báo lỗi.
 
 ### 2.5 Viseme theo chữ: bỏ
 
