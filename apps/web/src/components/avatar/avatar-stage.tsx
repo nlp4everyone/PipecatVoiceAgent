@@ -2,7 +2,7 @@ import { type VRM, VRMUtils } from "@pixiv/three-vrm";
 import { PerformanceMonitor } from "@react-three/drei";
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import { Component, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MathUtils, Mesh, Object3D, type PerspectiveCamera } from "three";
+import { MathUtils, Mesh, Object3D, type PerspectiveCamera, type Quaternion } from "three";
 import { AvatarLoader, registerVrm } from "./preload";
 
 import type { OrbState } from "@/components/chat-orb";
@@ -94,7 +94,7 @@ export default function AvatarStage({
           <Avatar url={AVATAR_URL} poseRef={poseRef} botTrack={botTrack} config={config} onReady={handleReady} />
         </Canvas>
       </LoadBoundary>
-      {showFps && <div id="avatar-fps" className="absolute left-2 top-2 font-mono text-xs text-white/80" />}
+      {showFps && <div id="avatar-fps" className="absolute left-2 top-2 whitespace-pre font-mono text-xs text-white/80" />}
     </div>
   );
 }
@@ -112,6 +112,14 @@ class LoadBoundary extends Component<{ children: ReactNode; onError?: (e: unknow
     return this.state.failed ? null : this.props.children;
   }
 }
+
+/**
+ * Số liệu spring bones cho overlay `?avatar-fps`: số khớp, bật hay tắt, và mức chuyển động lớn nhất (độ đổi góc
+ * của một khớp giữa hai khung liên tiếp) trong khoảng đang đo (FrameDriver in rồi đặt lại mỗi giây). Đo chuyển động
+ * chứ không đo lệch so với tư thế lúc nạp: collider đẩy tay áo và váy đứng yên ở một góc lệch cố định (lần đo đầu
+ * ra 50° lúc đứng yên). Một giây đầu sau khi nạp model có thể cao vì các khớp còn đang ổn định. Chỉ ghi khi có `?avatar-fps`.
+ */
+const springStat = { on: false, joints: 0, peak: 0 };
 
 /** Thời gian chờ ổn định (ms) trước khi bắt đầu đo fps để hạ bậc. */
 const MONITOR_GRACE_MS = 4000;
@@ -174,7 +182,8 @@ function FrameDriver({
       frames++;
       if (showFps && now - since >= 1000) {
         const el = document.getElementById("avatar-fps");
-        if (el) el.textContent = `${tier} ${Math.round((frames * 1000) / (now - since))}/${Number.isFinite(target) ? target : "max"} fps · cores ${navigator.hardwareConcurrency} · mem ${(navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? "n/a"}`;
+        if (el) el.textContent = `${tier} ${Math.round((frames * 1000) / (now - since))}/${Number.isFinite(target) ? target : "max"} fps · cores ${navigator.hardwareConcurrency} · mem ${(navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? "n/a"}\nsprings ${springStat.on ? `${springStat.joints} · move ${springStat.peak.toFixed(2)}°/khung` : "off"}`;
+        springStat.peak = 0;
         frames = 0;
         since = now;
       }
@@ -222,6 +231,16 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
   const cam = useRef({ y: 0, z: 0 });
   // Lần cuối con trỏ đổi vị trí; `frame.pointer` giữ nguyên toạ độ cuối nên phải tự phát hiện lúc nó đứng yên.
   const pointerSeen = useRef({ x: 0, y: 0, at: 0 });
+
+  // `?avatar-fps`: ghi lại góc của các khớp spring bones; mỗi khung so với khung trước để đo chuyển động.
+  const showStat = useMemo(() => new URLSearchParams(location.search).has("avatar-fps"), []);
+  const shake = useMemo(() => new URLSearchParams(location.search).has("shake"), []);
+  const springRest = useRef<{ bone: Object3D; q: Quaternion }[]>([]);
+  useEffect(() => {
+    if (!showStat) return;
+    springRest.current = [...(vrm.springBoneManager?.joints ?? [])].map((j) => ({ bone: j.bone, q: j.bone.quaternion.clone() }));
+    springStat.joints = springRest.current.length;
+  }, [vrm, showStat]);
 
   // Chuẩn bị model một lần rồi đặt camera nửa người trên.
   useEffect(() => {
@@ -280,6 +299,16 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
       chest.rotation.z = MathUtils.damp(chest.rotation.z, Math.sin(t * 0.9) * pose.sway * k, 4, dt);
     }
 
+    // `?shake`: lắc cả thân (hips) 1,5 giây rồi đứng yên 2,5 giây, lặp lại, để xem tóc/váy trễ theo rồi lắc khi dừng.
+    if (shake) {
+      const hips = h.getNormalizedBoneNode("hips");
+      if (hips) {
+        const on = t % 4 < 1.5;
+        hips.rotation.y = on ? Math.sin(t * 9) * 0.35 : 0;
+        hips.rotation.z = on ? Math.sin(t * 7) * 0.08 : 0;
+      }
+    }
+
     // Điểm nhìn: con trỏ khi chưa gọi, còn lại là điểm lệch so với camera theo tư thế.
     const ptr = pointerSeen.current;
     if (frame.pointer.x !== ptr.x || frame.pointer.y !== ptr.y) {
@@ -332,7 +361,17 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
     }
     if (config.springBones) {
       vrm.update(dt);
+      if (showStat) {
+        springStat.on = true;
+        let peak = 0;
+        for (const r of springRest.current) {
+          peak = Math.max(peak, r.bone.quaternion.angleTo(r.q));
+          r.q.copy(r.bone.quaternion); // khung sau so với khung này
+        }
+        springStat.peak = Math.max(springStat.peak, MathUtils.radToDeg(peak));
+      }
     } else {
+      springStat.on = false;
       // Bậc nhẹ: bỏ spring bones (tốn CPU), chỉ cập nhật phần còn lại của VRM.
       vrm.humanoid.update();
       vrm.lookAt?.update(dt);
