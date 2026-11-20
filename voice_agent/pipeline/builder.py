@@ -15,7 +15,7 @@ from pipecat.processors.aggregators.llm_response_universal import (
 from pipecat.services.llm_service import LLMService
 from pipecat.transports.base_transport import BaseTransport
 
-from voice_agent.pipeline.processors.expression_tags import ExpressionTagProcessor
+from voice_agent.pipeline.processors.expression_tags import attach_expression_tags
 from voice_agent.services import Services
 
 
@@ -55,13 +55,13 @@ def build_pipeline(transport: BaseTransport,
     output so it records only text that was actually spoken (interruptions
     truncate it).
     """
+    attach_expression_tags(svc.tts)
     return Pipeline(
         [
             transport.input(),
             svc.stt,
             aggregators.user(),
             llm,
-            ExpressionTagProcessor(),
             svc.tts,
             transport.output(),
             aggregators.assistant(),

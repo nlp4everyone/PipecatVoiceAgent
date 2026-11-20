@@ -5,10 +5,14 @@ from pipecat.frames.frames import (
     LLMFullResponseStartFrame,
     LLMTextFrame,
     OutputTransportMessageFrame,
+    AggregatedTextFrame,
+    TTSTextFrame,
 )
 from pipecat.tests.utils import run_test
 
 from voice_agent.pipeline.processors.expression_tags import (
+    attach_expression_tags,
+    split_tags,
     EXPRESSION_MESSAGE_TYPE,
     ExpressionTagParser,
     ExpressionTagProcessor,
@@ -93,7 +97,7 @@ def sequence(down) -> list[str]:
     """Frames the TTS would see: text as-is, tags as ``<name>``."""
     out = []
     for f in down:
-        if isinstance(f, LLMTextFrame):
+        if isinstance(f, (LLMTextFrame, AggregatedTextFrame)):
             out.append(f.text)
         elif isinstance(f, OutputTransportMessageFrame):
             data = f.message["data"]
@@ -139,6 +143,62 @@ class ExpressionTagProcessorTest(unittest.IsolatedAsyncioTestCase):
     async def test_unknown_tag_sends_no_message(self):
         down = await self._run("[excited] Tuyệt!")
         self.assertEqual(sequence(down), ["Tuyệt!"])
+
+
+class SplitTagsTest(unittest.TestCase):
+    def test_strips_and_reports(self):
+        self.assertEqual(split_tags("[happy] Chào bạn!"), ("Chào bạn!", ["happy"]))
+
+    def test_unknown_tag_stripped_not_reported(self):
+        self.assertEqual(split_tags("[excited] Tuyệt!"), ("Tuyệt!", []))
+
+    def test_no_tag(self):
+        self.assertEqual(split_tags("Xin chào."), ("Xin chào.", []))
+
+
+class FakeTTS:
+    """Just the two methods ``attach_expression_tags`` touches."""
+
+    def __init__(self):
+        self.pushed = []
+        self.transforms = []
+
+    def add_text_transformer(self, fn, aggregation_type="*"):
+        self.transforms.append(fn)
+
+    async def push_frame(self, frame, direction=None):
+        self.pushed.append(frame)
+
+
+class AttachExpressionTagsTest(unittest.IsolatedAsyncioTestCase):
+    def _spoken(self, cls, text):
+        frame = cls(text, "sentence")
+        frame.will_be_spoken = True
+        return frame
+
+    async def test_speech_text_has_no_tag(self):
+        tts = FakeTTS()
+        attach_expression_tags(tts)
+        self.assertEqual(await tts.transforms[0]("[sad] Tôi buồn.", "sentence"), "Tôi buồn.")
+
+    async def test_message_follows_its_sentence_frame(self):
+        tts = FakeTTS()
+        attach_expression_tags(tts)
+        await tts.push_frame(self._spoken(AggregatedTextFrame, "[sad] Một."))
+        await tts.push_frame(self._spoken(AggregatedTextFrame, "[happy] Hai."))
+        self.assertEqual(sequence(tts.pushed), ["Một.", "<sad>", "Hai.", "<happy>"])
+
+    async def test_tts_text_frame_is_stripped_without_second_message(self):
+        tts = FakeTTS()
+        attach_expression_tags(tts)
+        await tts.push_frame(self._spoken(TTSTextFrame, "[sad] Một."))
+        self.assertEqual(sequence(tts.pushed), ["Một."])
+
+    async def test_unspoken_frame_is_untouched(self):
+        tts = FakeTTS()
+        attach_expression_tags(tts)
+        await tts.push_frame(AggregatedTextFrame("[sad] Một.", "sentence"))
+        self.assertEqual(sequence(tts.pushed), ["[sad] Một."])
 
 
 if __name__ == "__main__":

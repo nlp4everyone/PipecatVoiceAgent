@@ -12,14 +12,17 @@ from dataclasses import dataclass
 import pipecat.processors.frameworks.rtvi.models as RTVI
 from loguru import logger
 from pipecat.frames.frames import (
+    AggregatedTextFrame,
     Frame,
     InterruptionFrame,
     LLMFullResponseEndFrame,
     LLMFullResponseStartFrame,
     LLMTextFrame,
     OutputTransportMessageFrame,
+    TTSTextFrame,
 )
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+from pipecat.services.tts_service import TTSService
 
 from voice_agent.config.prompts import EXPRESSION_TAGS
 
@@ -158,3 +161,51 @@ class ExpressionTagProcessor(FrameProcessor):
             self._parser.reset()
 
         await self.push_frame(frame, direction)
+
+
+def split_tags(text: str) -> tuple[str, list[str]]:
+    """Whole-string version of the parser: ``(text without tags, known tags in order)``."""
+    parser = ExpressionTagParser()
+    segments = parser.feed(text)
+    clean = "".join(s for s in segments if isinstance(s, str)) + parser.flush()
+    return clean, [s.name for s in segments if isinstance(s, Tag)]
+
+
+def attach_expression_tags(tts: TTSService) -> None:
+    """Tell the client about each tag at the moment its sentence starts playing.
+
+    Tags stay in the text all the way into TTS, so each one travels inside its own
+    sentence. ``TTSService`` pushes the sentence's ``AggregatedTextFrame`` in the
+    audio queue, just before that sentence's audio; there we strip the tag from the
+    frame and push the RTVI message right after it. Sending from before TTS (the
+    old ``ExpressionTagProcessor``) cannot do this: TTS queues every sentence of a
+    turn in one audio context, so a message queued ahead of the audio is released
+    only when the whole turn has played.
+
+    Two edits to ``tts``, both instance-level:
+    * a text transformer removes the tags from the text sent for synthesis;
+    * ``push_frame`` is wrapped to strip tags from the frames TTS pushes
+      (subtitles, assistant context) and to send the message.
+    """
+
+    async def strip(text: str, _aggregation_type) -> str:
+        return split_tags(text)[0]
+
+    tts.add_text_transformer(strip, "*")
+    push = tts.push_frame
+
+    async def push_frame(frame: Frame, direction: FrameDirection = FrameDirection.DOWNSTREAM):
+        if isinstance(frame, AggregatedTextFrame) and frame.will_be_spoken:
+            frame.text, tags = split_tags(frame.text)
+            await push(frame, direction)
+            if not isinstance(frame, TTSTextFrame):  # TTSTextFrame repeats the same sentence
+                for name in tags:
+                    logger.debug(f"Expression tag at TTS: {name}")
+                    await push(
+                        OutputTransportMessageFrame(message=expression_message(name)),
+                        direction,
+                    )
+            return
+        await push(frame, direction)
+
+    tts.push_frame = push_frame  # type: ignore[method-assign]
