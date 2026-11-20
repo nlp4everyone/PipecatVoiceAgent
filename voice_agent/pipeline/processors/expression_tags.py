@@ -1,10 +1,11 @@
-"""Strip ``[happy]``-style expression tags from LLM text before it reaches TTS.
+"""``[happy]``-style expression tags: kept out of speech, sent to the client.
 
 The LLM prefixes sentences with a tag from ``EXPRESSION_TAGS`` (see
-``config/prompts.py``). While streaming, a tag can arrive split across chunks
-("[", "hap", "py]"), so ``ExpressionTagParser`` buffers a possible tag until it
-can tell. ``ExpressionTagProcessor`` is the thin FrameProcessor around it; it
-turns each tag into an RTVI server message for the client.
+``config/prompts.py``). ``attach_expression_tags`` wires a TTS service so each tag
+is removed from what is spoken and shown, and reaches the client as an RTVI server
+message when its sentence starts playing. ``ExpressionTagParser`` does the
+stripping; it buffers a possible tag across chunks ("[", "hap", "py]") so it also
+works on streamed text, and ``split_tags`` is its whole-string form.
 """
 
 from dataclasses import dataclass
@@ -14,14 +15,10 @@ from loguru import logger
 from pipecat.frames.frames import (
     AggregatedTextFrame,
     Frame,
-    InterruptionFrame,
-    LLMFullResponseEndFrame,
-    LLMFullResponseStartFrame,
-    LLMTextFrame,
     OutputTransportMessageFrame,
     TTSTextFrame,
 )
-from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
+from pipecat.processors.frame_processor import FrameDirection
 from pipecat.services.tts_service import TTSService
 
 from voice_agent.config.prompts import EXPRESSION_TAGS
@@ -118,51 +115,6 @@ def expression_message(tag: str) -> dict:
     return message.model_dump(exclude_none=True)
 
 
-class ExpressionTagProcessor(FrameProcessor):
-    """Sits between the LLM and TTS: removes tags from text, tells the client.
-
-    Each tag becomes an ``OutputTransportMessageFrame`` placed between the text
-    before it and the text after it. It is a non-system frame, so TTS queues it
-    in order with the audio instead of letting it overtake: the client gets it
-    when the sentence is about to play, not when the LLM wrote it.
-    """
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._parser = ExpressionTagParser()
-
-    async def process_frame(self, frame: Frame, direction: FrameDirection):
-        await super().process_frame(frame, direction)
-
-        if isinstance(frame, LLMTextFrame):
-            reuse = True  # first text segment keeps the original frame
-            for segment in self._parser.feed(frame.text):
-                if isinstance(segment, Tag):
-                    logger.debug(f"Expression tag from LLM: {segment.name}")
-                    await self.push_frame(
-                        OutputTransportMessageFrame(message=expression_message(segment.name)),
-                        direction,
-                    )
-                elif reuse:
-                    frame.text = segment
-                    await self.push_frame(frame, direction)
-                    reuse = False
-                else:
-                    extra = LLMTextFrame(text=segment)
-                    extra.skip_tts = frame.skip_tts
-                    await self.push_frame(extra, direction)
-            return
-
-        if isinstance(frame, LLMFullResponseEndFrame):
-            rest = self._parser.flush()
-            if rest:
-                await self.push_frame(LLMTextFrame(text=rest), direction)
-        elif isinstance(frame, (LLMFullResponseStartFrame, InterruptionFrame)):
-            self._parser.reset()
-
-        await self.push_frame(frame, direction)
-
-
 def split_tags(text: str) -> tuple[str, list[str]]:
     """Whole-string version of the parser: ``(text without tags, known tags in order)``."""
     parser = ExpressionTagParser()
@@ -178,7 +130,7 @@ def attach_expression_tags(tts: TTSService) -> None:
     sentence. ``TTSService`` pushes the sentence's ``AggregatedTextFrame`` in the
     audio queue, just before that sentence's audio; there we strip the tag from the
     frame and push the RTVI message right after it. Sending from before TTS (the
-    old ``ExpressionTagProcessor``) cannot do this: TTS queues every sentence of a
+    earlier ``ExpressionTagProcessor``, since removed) cannot do this: TTS queues every sentence of a
     turn in one audio context, so a message queued ahead of the audio is released
     only when the whole turn has played.
 

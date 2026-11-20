@@ -1,22 +1,23 @@
 import unittest
 
 from pipecat.frames.frames import (
+    AggregatedTextFrame,
     LLMFullResponseEndFrame,
     LLMFullResponseStartFrame,
     LLMTextFrame,
     OutputTransportMessageFrame,
-    AggregatedTextFrame,
+    TTSAudioRawFrame,
     TTSTextFrame,
 )
+from pipecat.services.tts_service import TTSService
 from pipecat.tests.utils import run_test
 
 from voice_agent.pipeline.processors.expression_tags import (
-    attach_expression_tags,
-    split_tags,
     EXPRESSION_MESSAGE_TYPE,
     ExpressionTagParser,
-    ExpressionTagProcessor,
     Tag,
+    attach_expression_tags,
+    split_tags,
 )
 
 
@@ -107,44 +108,6 @@ def sequence(down) -> list[str]:
     return out
 
 
-class ExpressionTagProcessorTest(unittest.IsolatedAsyncioTestCase):
-    async def _run(self, *chunks: str):
-        frames = [LLMFullResponseStartFrame(), *(LLMTextFrame(text=c) for c in chunks)]
-        frames.append(LLMFullResponseEndFrame())
-        down, _ = await run_test(ExpressionTagProcessor(), frames_to_send=frames)
-        return down
-
-    async def test_tags_become_messages_between_text(self):
-        down = await self._run("[", "sad", "] Tôi rất", " tiếc. ", "[neutral] Bạn ổn không?")
-        self.assertEqual(
-            sequence(down), ["<sad>", "Tôi rất", " tiếc. ", "<neutral>", "Bạn ổn không?"]
-        )
-
-    async def test_tag_in_the_middle_of_one_chunk_keeps_position(self):
-        down = await self._run("Một. [happy] Hai.")
-        self.assertEqual(sequence(down), ["Một. ", "<happy>", "Hai."])
-
-    async def test_no_tag_text_is_left_in_speech(self):
-        down = await self._run("[happy] Chào ", "[sad] bạn [excited] nhé")
-        spoken = "".join(f.text for f in down if isinstance(f, LLMTextFrame))
-        self.assertNotIn("[", spoken)
-        self.assertNotIn("]", spoken)
-
-    async def test_start_and_end_frames_pass_through(self):
-        down = await self._run("[happy] Chào")
-        kinds = [type(f) for f in down]
-        self.assertEqual(kinds[0], LLMFullResponseStartFrame)
-        self.assertEqual(kinds[-1], LLMFullResponseEndFrame)
-
-    async def test_dangling_bracket_is_not_lost(self):
-        down = await self._run("Xin chào [hap")
-        self.assertEqual("".join(sequence(down)), "Xin chào [hap")
-
-    async def test_unknown_tag_sends_no_message(self):
-        down = await self._run("[excited] Tuyệt!")
-        self.assertEqual(sequence(down), ["Tuyệt!"])
-
-
 class SplitTagsTest(unittest.TestCase):
     def test_strips_and_reports(self):
         self.assertEqual(split_tags("[happy] Chào bạn!"), ("Chào bạn!", ["happy"]))
@@ -199,6 +162,57 @@ class AttachExpressionTagsTest(unittest.IsolatedAsyncioTestCase):
         attach_expression_tags(tts)
         await tts.push_frame(AggregatedTextFrame("[sad] Một.", "sentence"))
         self.assertEqual(sequence(tts.pushed), ["[sad] Một."])
+
+
+class SilentTTS(TTSService):
+    """A real ``TTSService`` that records what it was asked to say."""
+
+    def __init__(self):
+        super().__init__(push_start_frame=True, push_stop_frames=True, sample_rate=16000)
+        self.spoken: list[str] = []
+
+    def can_generate_metrics(self) -> bool:
+        return False
+
+    async def run_tts(self, text, context_id):
+        self.spoken.append(text)
+        yield TTSAudioRawFrame(audio=b"\0" * 320, sample_rate=16000, num_channels=1)
+
+
+class AttachToRealTTSTest(unittest.IsolatedAsyncioTestCase):
+    """Guards against a Pipecat upgrade changing how TTS pushes its frames.
+
+    ``attach_expression_tags`` wraps ``push_frame`` on the instance, which only works
+    while TTS calls ``self.push_frame``; the fakes above cannot notice if that stops.
+    """
+
+    async def test_tags_are_not_spoken_and_each_message_follows_its_sentence(self):
+        tts = SilentTTS()
+        attach_expression_tags(tts)
+        frames = [
+            LLMFullResponseStartFrame(),
+            LLMTextFrame(text="[sad] Một câu buồn. "),
+            LLMTextFrame(text="[happy] Một câu vui."),
+            LLMFullResponseEndFrame(),
+        ]
+        down, _ = await run_test(tts, frames_to_send=frames)
+
+        self.assertEqual(" ".join(tts.spoken).count("["), 0)
+        sentences = [
+            f.text for f in down if isinstance(f, AggregatedTextFrame) and f.will_be_spoken
+        ]
+        self.assertTrue(all("[" not in s for s in sentences))
+        order = [
+            f"<{f.message['data']['expression']}>"
+            if isinstance(f, OutputTransportMessageFrame)
+            else "audio"
+            for f in down
+            if isinstance(f, (OutputTransportMessageFrame, TTSAudioRawFrame))
+        ]
+        self.assertEqual([x for x in order if x != "audio"], ["<sad>", "<happy>"])
+        # <sad> comes before the first audio and <happy> falls between the two sentences' audio
+        self.assertEqual(order[0], "<sad>")
+        self.assertIn("audio", order[order.index("<sad>") : order.index("<happy>")])
 
 
 if __name__ == "__main__":

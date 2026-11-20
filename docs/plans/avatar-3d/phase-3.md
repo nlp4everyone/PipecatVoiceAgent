@@ -71,13 +71,14 @@ Prompt mới phải đi cùng 3.2; thiếu processor tách thẻ thì TTS đọc
   trong `EXPRESSION_TAGS` mới được báo. `[1]`, `[2.5]`, `[]` giữ nguyên là chữ.
   Dấu cách ngay sau thẻ bị bỏ để câu không có hai dấu cách. Hết phản hồi mà còn
   `[hap` dở thì trả lại như chữ thường.
-- `ExpressionTagProcessor`: bọc bộ tách trong `FrameProcessor`. Đặt sau LLM, trước
-  TTS trong `pipeline/builder.py`. Gọi `on_expression(tag)` cho mỗi thẻ hợp lệ
-  theo thứ tự LLM viết; hiện chưa có ai nghe (nối ở 3.3). Reset khi bắt đầu phản
-  hồi mới hoặc khi bị ngắt lời.
+- `ExpressionTagProcessor`: bản đầu bọc bộ tách trong `FrameProcessor` đặt sau LLM,
+  trước TTS. **Đã xoá (2026-11-20)** vì tin gửi từ chỗ đó tới sai thứ tự; xem mục
+  "Độ lệch giữa mặt và giọng". `split_tags` (bộ tách dạng cả chuỗi) và
+  `attach_expression_tags` thay thế nó.
 
-Kiểm thử: `tests/test_expression_tags.py`, 21 ca (bộ tách, kể cả cắt giữa từng
-ký tự; processor qua `pipecat.tests.utils.run_test`). Chạy bằng
+Kiểm thử: `tests/test_expression_tags.py`, 23 ca (bộ tách, kể cả cắt giữa từng
+ký tự; `split_tags`; `attach_expression_tags` trên TTS giả và trên một
+`TTSService` thật qua `pipecat.tests.utils.run_test`). Chạy bằng
 `.venv/bin/python -m unittest discover -s tests`. Dùng `unittest` vì dự án chưa
 có pytest.
 
@@ -223,7 +224,7 @@ scratchpad của phiên, không trong repo.
 ### Hướng A: đã thử và chạy được (2026-11-20, chưa commit)
 
 Thẻ đi cùng chữ vào TTS thay vì bị tách ở trước. `attach_expression_tags(tts)` trong
-`expression_tags.py`, gọi ở `pipeline/builder.py` thay cho `ExpressionTagProcessor`:
+`expression_tags.py`, gọi ở `pipeline/builder.py` thay cho `ExpressionTagProcessor` (đã xoá):
 
 - một text transformer bỏ thẻ khỏi chữ gửi đi tổng hợp giọng;
 - `tts.push_frame` được bọc (ở mức đối tượng): khi TTS đẩy `AggregatedTextFrame` của
@@ -255,12 +256,13 @@ hai lần chạy, một kịch bản; đánh giá "đúng lúc" trên iPhone là
 - Lịch sử hội thoại của LLM vẫn không có thẻ (như trước), vì `TTSTextFrame` bị bỏ
   thẻ; rủi ro "LLM bỏ thẻ ở lượt sau" vẫn chỉ được kiểm bằng mô phỏng.
 - Câu chỉ gồm thẻ (ví dụ `[happy]` rồi hết phản hồi) sẽ gửi chữ rỗng cho TTS; chưa thử.
-- Bọc `tts.push_frame` ở mức đối tượng là cách gọn, nhưng phụ thuộc việc Pipecat gọi
-  `self.push_frame`. Nên đổi sang lớp con hoặc mixin nếu giữ lâu dài, và chưa thử
-  với nhà cung cấp TTS khác (Cartesia, ở chế độ TOKEN thì `AggregatedTextFrame`
-  được gộp khác, xem `tts_service.py` `_is_streaming_tokens`).
-- `ExpressionTagProcessor` không còn nằm trong pipeline nhưng vẫn còn trong mã và
-  trong các test của nó.
+- Bọc `tts.push_frame` ở mức đối tượng phụ thuộc việc Pipecat gọi `self.push_frame`.
+  Quyết định giữ cách này thay vì lớp con (5 nhà cung cấp TTS ở `factory.py`, mỗi
+  nhà một lớp là quá nhiều); thay vào đó `AttachToRealTTSTest` chạy trên một
+  `TTSService` thật và **sẽ fail nếu nâng cấp Pipecat làm đổi cách TTS đẩy khung**
+  (đã thử bằng cách bỏ dòng gán `tts.push_frame`: test fail). Nếu đổi nhà cung cấp
+  TTS thì vẫn phải thử lại, nhất là Cartesia ở chế độ TOKEN, nơi
+  `AggregatedTextFrame` được gộp khác (xem `tts_service.py` `_is_streaming_tokens`).
 
 Hướng B (mỗi câu một audio context) và C (chỉ giữ thẻ đầu) không còn cần thiết.
 Kịch bản đo nằm ở scratchpad (`run.mjs`, `pad.wav`), không trong repo.
