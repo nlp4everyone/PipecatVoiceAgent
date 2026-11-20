@@ -170,9 +170,97 @@ nên số liệu chỉ để tham khảo. Chưa thử trong cuộc gọi thật.
 khi vui/buồn đã ổn hơn sau khi chỉnh.
 
 **Chưa kiểm tra**
-- Độ lệch giữa lúc mặt đổi và lúc giọng nói phát (chưa đo; người thử không nêu
-  độ lệch rõ rệt).
+- Độ lệch giữa lúc mặt đổi và lúc giọng nói phát: đã đo trên Linux Chrome, xem
+  mục dưới. Lỗi thứ tự đã sửa bằng hướng A và nghe thử ổn trên iPhone; chưa đo số
+  trên iPhone.
 - LLM dự phòng (chưa cấu hình trên máy này).
 - Lúc đầu có lần người thử không thấy biểu cảm, sau đó thấy; chưa có log để biết
   nguyên nhân.
 - Hội thoại dài thật (mới mô phỏng bằng API).
+
+## Độ lệch giữa mặt và giọng (đo 2026-11-20)
+
+**Cách đo:** Chrome chạy tự động trên Linux (micro giả phát giọng VieNeu tiếng
+Việt), gọi bot thật với STT và TTS chạy trên máy. Log tạm trong `voice-screen.tsx`
+ghi `performance.now()` khi nhận tin `avatar-expression`, `BotStartedSpeaking` và
+`BotStoppedSpeaking`; log đã gỡ sau khi đo. Chỉ đo thứ tự thời gian phía trình
+duyệt, không nghe được giọng, không đo iPhone hay tai nghe Bluetooth.
+
+| Lượt | Tin biểu cảm | `bot-start` | `bot-stop` |
+|---|---|---|---|
+| Lời chào | `neutral` @ 4,44 s | 4,77 s | 7,42 s |
+| Trả lời 1 câu | `happy` @ 14,12 s | 14,44 s | 17,17 s |
+| Trả lời 3 câu (buồn, vui, ngạc nhiên) | `sad` @ 18,90 s, `happy` @ 18,94 s | 19,26 s | 29,82 s |
+| Cùng lượt 3 câu | `surprised` @ 29,82 s | | |
+
+- **Thẻ đầu của lượt:** tin tới sớm hơn `bot-start` khoảng 0,3 s. Nhỏ.
+- **Từ thẻ thứ hai:** sai. `sad` và `happy` tới cách nhau 41 ms, cùng trước khi giọng
+  bắt đầu, nên mặt nhảy ngay sang `happy` và câu buồn được nói với mặt vui.
+  `surprised` tới sát `bot-stop`, tức cuối lượt. Chỉ một lượt 3 câu, một lần chạy.
+- **Doc 3.3 nói chưa đúng:** "tin tới sau âm thanh câu trước và gần lúc câu sau
+  bắt đầu phát" chỉ đúng với thẻ đầu. Phần "đọc từ mã Pipecat" đã bỏ sót hai điều
+  dưới đây.
+
+### Nguyên nhân (đọc `pipecat/services/tts_service.py`, Pipecat 1.8.1)
+
+1. **Mọi câu của một lượt dùng chung một audio context** (`_turn_context_id`).
+   Khung không phải hệ thống đi qua `_serialization_queue`, và hàng đợi này chỉ nhả
+   khung kế tiếp khi cả context trước đã phát hết. Nên tin biểu cảm xếp sau
+   *câu đầu* phải chờ cả lượt, không chỉ chờ câu trước nó.
+2. **Bộ gộp câu cần nhìn trước.** Câu 1 chỉ được đóng khi chữ đầu của câu 2 tới.
+   Processor hiện đẩy tin `happy` ngay sau thẻ, tức *trước* chữ đầu của câu 2, nên
+   tin được xếp vào hàng đợi trước khi câu 1 kịp vào. Đó là lý do `sad` và `happy`
+   tới liền nhau.
+
+### Đã thử và bỏ (2026-11-20)
+
+Hoãn tin tới sau đoạn chữ đầu tiên theo thẻ (để bộ gộp đóng câu trước rồi mới xếp
+tin). Chạy lại cùng kịch bản: `sad` tới đúng lúc giọng bắt đầu (19,61 s so với
+19,95 s), nhưng `happy` và `surprised` cùng tới lúc `bot-stop` (29,23 s). Nguyên
+nhân 1 vẫn còn, nên chỉ sửa được thẻ đầu. Không giữ thay đổi này; bản diff nằm ở
+scratchpad của phiên, không trong repo.
+
+### Hướng A: đã thử và chạy được (2026-11-20, chưa commit)
+
+Thẻ đi cùng chữ vào TTS thay vì bị tách ở trước. `attach_expression_tags(tts)` trong
+`expression_tags.py`, gọi ở `pipeline/builder.py` thay cho `ExpressionTagProcessor`:
+
+- một text transformer bỏ thẻ khỏi chữ gửi đi tổng hợp giọng;
+- `tts.push_frame` được bọc (ở mức đối tượng): khi TTS đẩy `AggregatedTextFrame` của
+  một câu (đúng thứ tự với âm thanh, ngay trước âm thanh câu đó), bỏ thẻ khỏi
+  khung rồi đẩy tin RTVI ngay sau. `TTSTextFrame` (phụ đề, lịch sử hội thoại) cũng
+  được bỏ thẻ nhưng không gửi tin lần hai.
+
+Đo lại cùng kịch bản 3 câu, hai lần chạy (Linux Chrome, giọng VieNeu), thời điểm
+tính từ `bot-start`:
+
+| Lần | `sad` | `happy` | `surprised` | `bot-stop` |
+|---|---|---|---|---|
+| 1 | −0,29 s | +3,5 s | +6,3 s | +9,2 s |
+| 2 | −0,30 s | +4,8 s | +8,3 s | +11,4 s |
+
+Tin tới rải theo lượt, khoảng cách giữa các tin gần bằng thời lượng từng câu, thay
+vì dồn ở đầu hoặc cuối như trước. Log phía server cho thấy chữ gửi TTS không có
+thẻ, và chữ trong phụ đề ở trang không có thẻ. Chưa thấy lỗi nào.
+
+**Nghe thử trên iPhone (2026-11-20, người dùng, Safari, qua `tailscale serve`, bot
+thật, bản build có hướng A):** mặt đổi cùng lúc giọng chuyển sang câu mới; câu buồn
+hiện mặt buồn; không lần nào đọc ra chữ thẻ; phụ đề không có thẻ hay ngoặc vuông.
+Nhận xét bằng mắt và tai, không đo bằng số, không ghi riêng từng lượt.
+
+**Giới hạn:** số đo ở trên chỉ là thứ tự thời gian phía trình duyệt trên Linux,
+hai lần chạy, một kịch bản; đánh giá "đúng lúc" trên iPhone là của người nghe.
+
+**Còn phải xem:**
+- Lịch sử hội thoại của LLM vẫn không có thẻ (như trước), vì `TTSTextFrame` bị bỏ
+  thẻ; rủi ro "LLM bỏ thẻ ở lượt sau" vẫn chỉ được kiểm bằng mô phỏng.
+- Câu chỉ gồm thẻ (ví dụ `[happy]` rồi hết phản hồi) sẽ gửi chữ rỗng cho TTS; chưa thử.
+- Bọc `tts.push_frame` ở mức đối tượng là cách gọn, nhưng phụ thuộc việc Pipecat gọi
+  `self.push_frame`. Nên đổi sang lớp con hoặc mixin nếu giữ lâu dài, và chưa thử
+  với nhà cung cấp TTS khác (Cartesia, ở chế độ TOKEN thì `AggregatedTextFrame`
+  được gộp khác, xem `tts_service.py` `_is_streaming_tokens`).
+- `ExpressionTagProcessor` không còn nằm trong pipeline nhưng vẫn còn trong mã và
+  trong các test của nó.
+
+Hướng B (mỗi câu một audio context) và C (chỉ giữ thẻ đầu) không còn cần thiết.
+Kịch bản đo nằm ở scratchpad (`run.mjs`, `pad.wav`), không trong repo.
