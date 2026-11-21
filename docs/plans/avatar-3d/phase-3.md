@@ -123,9 +123,9 @@ Phần này là bản đầu và đã được thay bằng hướng A; độ l�
   trung tính" đến từ chính việc chuyển trạng thái, không cần bộ đếm giờ.
 - Chuyển mượt nhờ `damp` sẵn có trong `avatar-stage.tsx` (cảm xúc, nghiêng, cúi,
   điểm nhìn).
-- Model mặc định (VRM 0.x) có `joy / sorrow / fun / angry`, **không có `surprised`**.
-  Ánh xạ: `happy` → joy 0.5; `sad` → sorrow 0.45 và cúi đầu; `surprised` → ngẩng
-  đầu và một chút joy (model có `surprised` thì dùng luôn); `thinking` → nghiêng
+- Model mặc định (VRM 0.x) có `joy / sorrow / fun / angry` và một nhóm tuỳ chỉnh tên
+  `Surprised` (VRM 0.x không có preset `surprised`). Ánh xạ: `happy` → joy 0.5; `sad` →
+  sorrow 0.45 và cúi đầu; `surprised` → nhóm `Surprised` 0.6, ngẩng đầu và một chút joy; `thinking` → nghiêng
   đầu, nhìn lên như trạng thái suy nghĩ; `neutral` → mặt trung tính, thay cho
   nụ cười nhẹ nền của trạng thái nói.
 - Các giá trị biên độ chỉnh qua `/?avatar-expression` và cuộc gọi thật.
@@ -169,6 +169,26 @@ nên số liệu chỉ để tham khảo. Chưa thử trong cuộc gọi thật.
 
 **Cuộc gọi thật** (người thử): TTS không đọc ra thẻ; mặt đổi theo câu nói; miệng
 khi vui/buồn đã ổn hơn sau khi chỉnh.
+
+**Tần suất `surprised` (2026-11-21).** Gọi thẳng Groq `openai/gpt-oss-120b`, nhiệt độ
+0.2, system prompt mặc định, mỗi câu 3 lần (30 lần gọi). 6 câu gợi ngạc nhiên:
+"Thật á? Tôi không tin nổi luôn!" → `surprised` 3/3; câu sinh nhật bất ngờ →
+`surprised` 2, `happy` 1; trúng số, gặp lại bạn cũ sau 20 năm, thư trúng tuyển →
+`happy` 3/3 mỗi câu; "bạch tuộc có ba trái tim" → `neutral` 3/3. 4 câu đối chứng
+(thông tin, lời khuyên, chào hỏi): 0 lần `surprised`. Kết luận: LLM dùng `surprised`
+khi người nói tỏ ra ngạc nhiên và không dùng nhầm, còn tin vui nó chọn `happy`; nên
+`surprised` hiếm vì ít dịp, không phải vì LLM quên thẻ. Không sửa prompt. Một mô
+hình, 6 câu, chưa thử LLM dự phòng. Phía avatar (2026-11-21, ảnh tĩnh Chrome
+headless trên `/?avatar-expression`): **lỗi thật**. `avatar-stage` gọi `setValue("surprised")`
+nhưng model chỉ có nhóm tên `Surprised` (S hoa), nên biểu cảm này không bao giờ có tác dụng, avatar
+chỉ ngẩng đầu và cười nhẹ, gần như `neutral`. Đã sửa bằng bảng `EXPRESSION_NAME` trong
+`avatar-stage.tsx`; sau sửa miệng tròn mở, khác rõ `neutral` và `happy`. Mắt vẫn không mở to
+(morph mắt/mày riêng của VRoid chỉ dịch 3-6 mm). Thêm `MOUTH_SURPRISED_OVERLAP = 0.5` để giảm
+độ mở miệng nói khi đang ngạc nhiên; hệ số này đoán bằng mắt, chưa đo như `joy`/`sorrow`.
+Thử với miệng giả (`/?avatar-expression&mouth=sim`, ảnh tĩnh): ở `Surprised` 0.8 miệng mở lớn hơn
+cả `neutral` mở hết cỡ và gần như luôn mở, nên hạ xuống 0.6; sau đó miệng mở ngang `happy` và
+`neutral`. Chuyển cảnh `Surprised` lên 0.77 sau 0,5 s và về 0 sau ~0,75 s, mượt như các cảm xúc
+khác. Chưa thử với giọng thật.
 
 **Chưa kiểm tra**
 - Độ lệch giữa lúc mặt đổi và lúc giọng nói phát: đã đo trên Linux Chrome, xem
