@@ -82,7 +82,7 @@ ký tự; `split_tags`; `attach_expression_tags` trên TTS giả và trên một
 `.venv/bin/python -m unittest discover -s tests`. Dùng `unittest` vì dự án chưa
 có pytest.
 
-**Chưa kiểm tra trong cuộc gọi thật** (có TTS thật) xem TTS có đọc ra thẻ không.
+Cuộc gọi thật đã xác nhận TTS không đọc ra thẻ (xem mục Kiểm tra).
 
 Điều cần xem ở 3.4: lịch sử hội thoại do aggregator ghi sau TTS nên **không có
 thẻ**; nếu LLM thấy các câu trả lời cũ không thẻ, nó có thể bắt đầu bỏ thẻ ở
@@ -106,10 +106,10 @@ vài giây (TTS còn đang tạo âm thanh, câu trước còn đang phát). Tha
 `OutputTransportMessageFrame`, một khung dữ liệu: `TTSService` đưa khung dữ liệu
 đi qua hàng đợi tuần tự cùng thứ tự với các đợt âm thanh, nên tin tới sau âm thanh
 câu trước và gần lúc câu sau bắt đầu phát. Đọc từ mã Pipecat 1.8.1
-(`services/tts_service.py`, nhánh `else` của `process_frame`), **chưa đo bằng
-cuộc gọi thật**.
+(`services/tts_service.py`, nhánh `else` của `process_frame`), sau đó đã đo và
+thấy chỉ đúng với thẻ đầu (xem mục "Độ lệch giữa mặt và giọng").
 
-Độ trễ tin so với giọng nói **chưa đo**; xem ghi chú ở 3.4.
+Phần này là bản đầu và đã được thay bằng hướng A; độ lệch đã đo, xem mục "Độ lệch giữa mặt và giọng".
 
 ### 3.4 Client đặt biểu cảm
 
@@ -221,7 +221,7 @@ tin). Chạy lại cùng kịch bản: `sad` tới đúng lúc giọng bắt đ�
 nhân 1 vẫn còn, nên chỉ sửa được thẻ đầu. Không giữ thay đổi này; bản diff nằm ở
 scratchpad của phiên, không trong repo.
 
-### Hướng A: đã thử và chạy được (2026-11-20, chưa commit)
+### Hướng A: đã thử và chạy được (2026-11-20, đã commit ở `d2da6b7`)
 
 Thẻ đi cùng chữ vào TTS thay vì bị tách ở trước. `attach_expression_tags(tts)` trong
 `expression_tags.py`, gọi ở `pipeline/builder.py` thay cho `ExpressionTagProcessor` (đã xoá):
@@ -255,7 +255,7 @@ hai lần chạy, một kịch bản; đánh giá "đúng lúc" trên iPhone là
 **Còn phải xem:**
 - Lịch sử hội thoại của LLM vẫn không có thẻ (như trước), vì `TTSTextFrame` bị bỏ
   thẻ; rủi ro "LLM bỏ thẻ ở lượt sau" vẫn chỉ được kiểm bằng mô phỏng.
-- Câu chỉ gồm thẻ (ví dụ `[happy]` rồi hết phản hồi) sẽ gửi chữ rỗng cho TTS; chưa thử.
+- Câu chỉ gồm thẻ (ví dụ `[happy]` rồi hết phản hồi): đã thử bằng test trên `TTSService` thật (2026-11-21). Không crash, tin biểu cảm vẫn tới, nhưng nhà cung cấp vẫn nhận chuỗi rỗng `""`; chưa thử với TTS thật nên chưa biết chúng có lỗi không. Đã thử chặn `run_tts` khi rỗng nhưng bỏ: Pipecat chờ ~3 s rồi báo `completed with no audio`, làm lượt bị treo.
 - Bọc `tts.push_frame` ở mức đối tượng phụ thuộc việc Pipecat gọi `self.push_frame`.
   Quyết định giữ cách này thay vì lớp con (5 nhà cung cấp TTS ở `factory.py`, mỗi
   nhà một lớp là quá nhiều); thay vào đó `AttachToRealTTSTest` chạy trên một

@@ -214,6 +214,40 @@ class AttachToRealTTSTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(order[0], "<sad>")
         self.assertIn("audio", order[order.index("<sad>") : order.index("<happy>")])
 
+    async def _run(self, *texts: str):
+        tts = SilentTTS()
+        attach_expression_tags(tts)
+        frames = [LLMFullResponseStartFrame()]
+        frames += [LLMTextFrame(text=t) for t in texts]
+        frames.append(LLMFullResponseEndFrame())
+        down, _ = await run_test(tts, frames_to_send=frames)
+        return tts, down
+
+    async def test_tag_only_response_does_not_crash_or_speak_tag(self):
+        tts, down = await self._run("[happy]")
+        self.assertEqual(" ".join(tts.spoken).count("["), 0)
+        # The provider is still asked to say "" (skipping it makes Pipecat wait ~3 s
+        # for audio that never comes); the message must still go out.
+        self.assertEqual([t for t in tts.spoken if t.strip()], [])
+        self.assertEqual(
+            [f.message["data"]["expression"] for f in down if isinstance(f, OutputTransportMessageFrame)],
+            ["happy"],
+        )
+
+    async def test_tag_then_nothing_split_across_chunks(self):
+        tts, down = await self._run("[ha", "ppy]")
+        self.assertEqual(" ".join(tts.spoken).count("["), 0)
+        self.assertEqual([t for t in tts.spoken if t.strip()], [])
+
+    async def test_trailing_tag_after_a_sentence(self):
+        tts, down = await self._run("[happy] Chào bạn. ", "[sad]")
+        self.assertEqual(" ".join(tts.spoken).count("["), 0)
+        self.assertEqual([t for t in tts.spoken if t.strip()], ["Chào bạn."])
+        self.assertEqual(
+            [f.message["data"]["expression"] for f in down if isinstance(f, OutputTransportMessageFrame)],
+            ["happy", "sad"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

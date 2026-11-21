@@ -68,7 +68,7 @@ việc giảm dung lượng ở bước 4.6 liên quan trực tiếp tới thờ
   mở app không; số đo 60 fps ở phase 4.1 nhiều khả năng đo trong Safari, WKWebView có
   thể khác.
 - Mobile dùng transport 1.8.0 (đã vá), web dùng 1.10.8: cần thử một cuộc gọi thật để
-  chắc tin biểu cảm tới nơi. Độ trễ biểu cảm so với giọng chưa đo (xem phase 3).
+  chắc tin biểu cảm tới nơi. Độ lệch biểu cảm so với giọng đã đo trên Linux Chrome và nghe thử trên iPhone (xem phase 3).
 - Phạm vi: kế hoạch chỉ nhắc iPhone, nhưng `apps/mobile/android` có sẵn và số đo mức
   âm trước đó lấy từ Android. Cần chốt có hỗ trợ Android không.
 
