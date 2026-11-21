@@ -98,8 +98,8 @@ type ExpressionOverride = Partial<Pick<AvatarPose, "tilt" | "pitch" | "gaze" | "
 
 /**
  * Phần đè lên tư thế lúc bot đang nói. `emotion` thay hẳn cảm xúc nền của tư thế
- * (nên `neutral` là mặt trung tính). Model mặc định chỉ có joy / sorrow / fun / angry,
- * không có `surprised`, nên ngạc nhiên thêm ngẩng đầu và một chút vui. Cảm xúc vui và buồn
+ * (nên `neutral` là mặt trung tính). Model mặc định có joy / sorrow / fun / angry và một nhóm tuỳ chỉnh
+ * "Surprised" (VRM 0.x không có preset này; `avatar-stage` đổi tên khi áp), nên ngạc nhiên thêm ngẩng đầu và một chút vui. Cảm xúc vui và buồn
  * giữ vừa phải vì chúng đè lên vùng miệng của lipsync (xem `MOUTH_*_OVERLAP` ở avatar-stage).
  * Các giá trị là đoán ban đầu, chỉnh khi thử với bot thật.
  */
@@ -107,7 +107,7 @@ export const EXPRESSIONS: Record<ExpressionTag, ExpressionOverride> = {
   neutral: { emotion: {} },
   happy: { emotion: { happy: 0.5 } },
   sad: { pitch: 0.1, emotion: { sad: 0.45 } },
-  surprised: { pitch: -0.1, emotion: { surprised: 0.8, happy: 0.25 } },
+  surprised: { pitch: -0.1, emotion: { surprised: 0.6, happy: 0.25 } },
   thinking: {
     tilt: AVATAR_POSES.thinking.tilt,
     pitch: AVATAR_POSES.thinking.pitch,
@@ -135,4 +135,6 @@ export function useAvatarPose(state: OrbState, muted: boolean, expression?: Expr
 // sorrow ngược chiều, bớt ~0.8 mỗi đơn vị. Bù lại bằng cách co giãn độ mở của miệng nói.
 export const MOUTH_JOY_OVERLAP = 0.6;
 export const MOUTH_SORROW_OVERLAP = 0.8;
+// Ngạc nhiên tự làm miệng tròn mở; giảm miệng nói để không mở quá. Giá trị chỉnh bằng mắt, chưa đo như hai hệ số trên.
+export const MOUTH_SURPRISED_OVERLAP = 0.5;
 

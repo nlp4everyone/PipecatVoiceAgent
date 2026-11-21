@@ -14,6 +14,7 @@ import {
   type ExpressionTag,
   MOUTH_JOY_OVERLAP,
   MOUTH_SORROW_OVERLAP,
+  MOUTH_SURPRISED_OVERLAP,
   useAvatarPose,
 } from "./use-avatar-state";
 import { applyArmPose, type ArmPose, AVATAR_URL, dampArm, frameUpperBody, prepareVrm, REST_ARM, SHOULDER_BREATH_GAIN, setupLookAt } from "./vrm-frame";
@@ -30,6 +31,8 @@ const TALK_DAMP = 3.5;
 /** Con trỏ đứng yên quá ngần này (giây) thì avatar thôi nhìn theo và quay về nhìn giữa. */
 const POINTER_IDLE_S = 2;
 const EMOTIONS = ["happy", "relaxed", "sad", "surprised"] as const;
+/** VRM 0.x không có preset `surprised`; model mặc định khai báo nó thành nhóm tuỳ chỉnh tên "Surprised". */
+const EXPRESSION_NAME: Partial<Record<(typeof EMOTIONS)[number], string>> = { surprised: "Surprised" };
 interface AvatarStageProps {
   state: OrbState;
   /** Mic tắt: avatar chậm lại, mặt trung tính. */
@@ -350,10 +353,14 @@ function Avatar({ url, config, poseRef, botTrack, onReady }: AvatarProps) {
       }
       for (const n of EMOTIONS) {
         const target = muted ? 0 : (pose.emotion[n] ?? 0);
-        em.setValue(n, MathUtils.damp(em.getValue(n) ?? 0, target, 6, dt));
+        const name = EXPRESSION_NAME[n] ?? n;
+        em.setValue(name, MathUtils.damp(em.getValue(name) ?? 0, target, 6, dt));
       }
       const openScale = MathUtils.clamp(
-        1 - MOUTH_JOY_OVERLAP * (em.getValue("happy") ?? 0) + MOUTH_SORROW_OVERLAP * (em.getValue("sad") ?? 0),
+        1 -
+          MOUTH_JOY_OVERLAP * (em.getValue("happy") ?? 0) +
+          MOUTH_SORROW_OVERLAP * (em.getValue("sad") ?? 0) -
+          MOUTH_SURPRISED_OVERLAP * (em.getValue("Surprised") ?? 0),
         0.3,
         1.8,
       );
